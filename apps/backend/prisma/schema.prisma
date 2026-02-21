@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Web search engine for System Design + DSA blogs
+// ---------------------------------------------------------------------------
+
+model Page{
+  id String @default(uuid())
+  url String @unique
+  domain String @index
+  category Category @index
+
+  title       String
+  description String?
+
+  author      String?
+  publishedAt DateTime?
+
+  contentId   String
+  content     PageContent @relation(fields: [contentId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+}
+
+model PageContent {
+  id          String   @id @default(uuid())
+  text        String
+  contentHash String   @unique
+  wordCount   Int
+}
+
+// model PageChunk {
+//   id        String  @id @default(uuid())
+//   pageId    String
+//   page      Page    @relation(fields: [pageId], references: [id])
+
+//   chunkText String
+//   embedding Float[]?
+// }
+
+
+
+enum Category {
+  SYSTEM_DESIGN
+  ALGORITHMS
+  DISTRIBUTED_SYSTEMS
+  COMPETITIVE_PROGRAMMING
+}
