@@ -14,11 +14,11 @@ datasource db {
 // Web search engine for System Design + DSA blogs
 // ---------------------------------------------------------------------------
 
-model Page{
-  id String @default(uuid())
-  url String @unique
-  domain String @index
-  category Category @index
+model Page {
+  id       String   @default(uuid())
+  url      String   @unique
+  domain   String
+  category Category
 
   title       String
   description String?
@@ -26,19 +26,20 @@ model Page{
   author      String?
   publishedAt DateTime?
 
-  contentId   String
-  content     PageContent @relation(fields: [contentId], references: [id])
+  contentId String
+  content   PageContent @relation(fields: [contentId], references: [id])
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PageContent {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   text        String
-  contentHash String   @unique
+  contentHash String @unique
   wordCount   Int
+  pages       Page[]
 }
 
 // model PageChunk {
@@ -49,8 +50,6 @@ model PageContent {
 //   chunkText String
 //   embedding Float[]?
 // }
-
-
 
 enum Category {
   SYSTEM_DESIGN
