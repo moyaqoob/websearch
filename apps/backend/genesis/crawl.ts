@@ -79,7 +79,7 @@ export class DomainQueues {
     }
   }
 
-function extractDomain(url: string) {
+export function extractDomain(url: string) {
   const parsed = new URL(url);
   if (!parsed.hostname) {
     return "No host name available";
