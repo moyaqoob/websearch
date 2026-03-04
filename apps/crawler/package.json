@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "crawler",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -10,9 +10,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@types/cheerio": "^1.0.0",
-    "cheerio": "^1.2.0",
-    "dotenv": "^17.3.1",
-    "prisma": "^7.4.1"
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.6.2"
   }
 }
