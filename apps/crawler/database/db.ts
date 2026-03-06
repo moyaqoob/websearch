@@ -29,7 +29,7 @@ export function initSchema() {
     // Core article table
     `
     CREATE TABLE IF NOT EXISTS articles (
-      id TEXT PRIMARY KEY,                -- Article.id (hash of URL)
+      id TEXT PRIMARY KEY,                
       url TEXT NOT NULL,
       url_normalized TEXT NOT NULL,
       domain TEXT NOT NULL,
@@ -192,3 +192,29 @@ export function initSchema() {
 // Initialize schema immediately when this module is imported
 initSchema();
 
+// id: '9a82a316-cf02-4175-a350-2e63104d9b92',
+// url: 'https://example.com',
+// url_normalized: 'https://example.com',
+// domain: 'example.com',
+// title: 'Example Title',
+// snippet: 'Example snippet',
+// content: 'Example content',
+// word_count: 10,
+// author: null,
+// published_date: null,
+// updated_date: null,
+// crawl_timest amp: '2026-03-05T06:29:26.217Z',
+// category: null,
+// difficulty: null,
+// quality_score: 0,
+// readability_score: 0,
+// authority_score: 0,
+// freshness_score: 0,
+// popularity_score: 0,
+// content_hash: 'hash123',
+// is_indexed: 0,
+// s3_snippet_key: null,
+// s3_content_key: null,
+// embedding_vector_json: null,
+// tfidf_vectors_json: null
+// },

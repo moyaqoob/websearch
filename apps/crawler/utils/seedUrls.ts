@@ -3,7 +3,7 @@
  * 1000+ articles target across multiple authoritative sources
  */
 
-export const DSA_AND_SYSTEM_DESIGN_URLS: string[] = [
+export const seedUrls: string[] = [
     "https://www.geeksforgeeks.org/data-structures/",
     "https://www.geeksforgeeks.org/array-data-structure/",
     "https://www.geeksforgeeks.org/linked-list-data-structure/",
@@ -473,4 +473,4 @@ export const DSA_AND_SYSTEM_DESIGN_URLS: string[] = [
     "logging",
   ];
   
-export default DSA_AND_SYSTEM_DESIGN_URLS;
+export default seedUrls;
