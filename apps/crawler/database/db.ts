@@ -1,32 +1,12 @@
-import Database from "better-sqlite3";
-
+import { Database } from "bun:sqlite";
 // Path to the crawler database file (relative to process cwd by default)
 const DB_PATH = process.env.CRAWLER_DB_PATH ?? "crawler.db";
 
 export const db = new Database(DB_PATH);
 
-// Enable WAL mode for better concurrency and durability
-db.pragma("journal_mode = WAL");
 
-/**
- * Initialize database schema for Article storage.
- *
- * This maps your TypeScript interfaces into a normalized schema:
- * - articles: core article metadata and scalar fields
- * - article_topics: many-to-many for article <-> topic
- * - article_languages: many-to-many for article <-> language
- * - code_blocks: code snippets per article
- * - sections: hierarchical sections per article
- * - external_links: outgoing links from article
- * - internal_links: internal links from article
- * - entities: extracted entities from article
- *
- * Some complex structures (embeddings, tf-idf vectors, entity positions)
- * are stored as JSON blobs for simplicity.
- */
 export function initSchema() {
   const createStatements = [
-    // Core article table
     `
     CREATE TABLE IF NOT EXISTS articles (
       id TEXT PRIMARY KEY,                
@@ -54,6 +34,7 @@ export function initSchema() {
       popularity_score REAL NOT NULL,
 
       content_hash TEXT NOT NULL,
+      source_tier TEXT,
       is_indexed INTEGER NOT NULL DEFAULT 0, -- 0/1 boolean
 
       s3_snippet_key TEXT,
@@ -85,7 +66,6 @@ export function initSchema() {
     );
     `,
 
-    // Code blocks
     `
     CREATE TABLE IF NOT EXISTS code_blocks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,7 +157,7 @@ export function initSchema() {
     `,
     `
     CREATE INDEX IF NOT EXISTS idx_entities_article_id ON entities(article_id);
-    `
+    `,
   ];
 
   const transaction = db.transaction(() => {

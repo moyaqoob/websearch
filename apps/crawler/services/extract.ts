@@ -1,61 +1,38 @@
 import * as cheerio from "cheerio";
-import type { CrawledArticle } from "../utils";
+import type { CrawledArticle } from "../utils/index";
+import { isLikelyArticleUrl, normalizeQueueUrl } from "./urlFilters";
 
-class Extract {
-  extract(html: string, url: string): Partial<CrawledArticle> {
-    console.log(`\n🔍 STAGE 3: EXTRACT`);
-    console.log(`   Parsing HTML...`);
+export interface ExtractResult {
+  article: Partial<CrawledArticle>;
+  discoveredUrls: string[];
+}
 
+export class Extract {
+  extract(html: string, url: string): ExtractResult {
     const $ = cheerio.load(html);
 
-    // Remove noise
     $("script, style, nav, footer, .ad, .comment, .sidebar").remove();
 
-    // Step 3.1: Extract Title
     const title = this.extractTitle($, html);
-    console.log(`   ✅ Title: "${title}"`);
-
-    // Step 3.2: Extract Content
     const content = this.extractContent($);
-    console.log(`   ✅ Content: ${content.length} characters`);
-
-    // Step 3.3: Extract Snippet (first 200 chars)
     const snippet = content.substring(0, 200);
-    console.log(`   ✅ Snippet: "${snippet.substring(0, 50)}..."`);
-
-    // Step 3.4: Extract Author
     const author = this.extractAuthor($);
-    console.log(`   ✅ Author: ${author || "Unknown"}`);
-
-    // Step 3.5: Extract Published Date
     const publishedDate = this.extractDate($);
-    console.log(`   ✅ Published Date: ${publishedDate || "Unknown"}`);
-
-    // Step 3.6: Extract Code Blocks (for DSA detection)
-    const codeBlocks = this.extractCodeBlocks($);
-    console.log(`   ✅ Code Blocks: ${codeBlocks.length}`);
-
-    // Step 3.7: Calculate Word Count
     const wordCount = content.split(/\s+/).filter((w) => w.length > 0).length;
-    console.log(`   ✅ Word Count: ${wordCount}`);
-
-    // Step 3.8: Extract Category/Topics
     const category = this.detectCategory(title, content);
-    console.log(`   ✅ Category: ${category || "General"}`);
-
-    // Step 3.9: Extract Internal Links (for crawling more)
-    const internalLinks = this.extractInternalLinks($, url);
-    console.log(`   ✅ Internal Links: ${internalLinks.length}`);
+    const discoveredUrls = this.extractInternalLinks($, url);
 
     return {
-      title,
-      snippet,
-      content,
-      author,
-      published_date: publishedDate,
-      word_count: wordCount,
-      category,
-      // We'll fill in other fields in later stages
+      article: {
+        title,
+        snippet,
+        content,
+        author,
+        published_date: publishedDate,
+        word_count: wordCount,
+        category,
+      },
+      discoveredUrls,
     };
   }
 
@@ -69,11 +46,19 @@ class Extract {
   }
 
   private extractContent($: any): string {
-    const content =
-      $('article, main, [role="main"], .content, .post').text() ||
-      $("body").text();
+    const container =
+      $('article, main, [role="main"], .content, .post').first() ||
+      $("body");
 
-    return content.replace(/\s+/g, " ").trim().substring(0, 100000); // Limit to 100K chars
+    container.find("pre, code").each((_: unknown, elem: unknown) => {
+      const snippet = $(elem).text().trim();
+      if (!snippet) return;
+      $(elem).replaceWith(`\n\`\`\`\n${snippet}\n\`\`\`\n`);
+    });
+
+    const content = (container.length > 0 ? container : $("body")).text();
+
+    return content.replace(/\s+/g, " ").trim().substring(0, 100000);
   }
 
   private extractAuthor($: any): string | null {
@@ -98,8 +83,8 @@ class Extract {
         if (!isNaN(date.getTime())) {
           return date.toISOString().split("T")[0];
         }
-      } catch (e) {
-        console.error("Invalid Date");
+      } catch {
+        // Invalid date format, skip
       }
     }
     return null;
@@ -135,47 +120,276 @@ class Extract {
     const text = (title + " " + content).toLowerCase();
 
     const categories: Record<string, string[]> = {
-      algorithms: [
+      "algorithms-and-data-structures": [
         "algorithm",
         "sorting",
         "quick sort",
         "merge sort",
+        "heap sort",
+        "radix sort",
         "binary search",
         "dfs",
         "bfs",
+        "depth first",
+        "breadth first",
         "dynamic programming",
+        "memoization",
+        "tabulation",
         "greedy",
         "backtracking",
         "recursion",
+        "divide and conquer",
         "time complexity",
-      ],
-
-      "data-structures": [
+        "space complexity",
+        "big o",
+        "amortized",
         "array",
         "linked list",
+        "doubly linked",
         "stack",
         "queue",
+        "deque",
         "hash table",
         "hash map",
+        "hash function",
+        "collision",
         "heap",
+        "priority queue",
         "tree",
         "binary tree",
+        "binary search tree",
+        "avl tree",
+        "red black tree",
+        "b-tree",
         "trie",
+        "segment tree",
+        "fenwick tree",
         "graph",
         "adjacency list",
+        "adjacency matrix",
+        "shortest path",
+        "dijkstra",
+        "bellman ford",
+        "topological sort",
+        "minimum spanning tree",
+        "union find",
+        "disjoint set",
+        "bloom filter",
+        "skip list",
       ],
 
       "system-design": [
         "system design",
         "scalability",
-        "distributed system",
+        "horizontal scaling",
+        "vertical scaling",
         "load balancer",
+        "load balancing",
+        "reverse proxy",
+        "api gateway",
+        "rate limiting",
+        "cdn",
+        "content delivery",
+        "caching",
+        "cache invalidation",
+        "redis",
+        "memcached",
         "database sharding",
+        "partitioning",
+        "replication",
         "microservices",
+        "monolith",
+        "service mesh",
         "event driven",
+        "event sourcing",
+        "cqrs",
+        "message queue",
+        "kafka",
+        "rabbitmq",
+        "pub sub",
         "high availability",
         "fault tolerance",
-        "message queue",
+        "circuit breaker",
+        "bulkhead",
+        "idempotency",
+        "consistency",
+        "availability",
+        "partition tolerance",
+        "cap theorem",
+        "eventual consistency",
+        "strong consistency",
+        "two phase commit",
+        "saga pattern",
+        "service discovery",
+        "heartbeat",
+        "health check",
+        "back pressure",
+        "throttling",
+        "observability",
+        "distributed tracing",
+        "monitoring",
+      ],
+
+      "distributed-systems": [
+        "distributed system",
+        "distributed computing",
+        "consensus",
+        "raft",
+        "paxos",
+        "leader election",
+        "quorum",
+        "replication",
+        "log replication",
+        "write ahead log",
+        "wal",
+        "vector clock",
+        "lamport clock",
+        "causality",
+        "linearizability",
+        "serializability",
+        "isolation",
+        "snapshot isolation",
+        "mvcc",
+        "distributed transaction",
+        "byzantine fault",
+        "network partition",
+        "split brain",
+        "fencing",
+        "lock",
+        "distributed lock",
+        "zookeeper",
+        "etcd",
+        "coordination",
+        "membership protocol",
+        "gossip protocol",
+        "crdt",
+        "conflict free",
+        "geo distributed",
+        "multi region",
+        "clock synchronization",
+        "ntp",
+        "hybrid logical clock",
+        "exactly once",
+        "LRU",
+        "at most once",
+        "delivery semantics",
+      ],
+
+      databases: [
+        "database",
+        "sql",
+        "nosql",
+        "query",
+        "query optimization",
+        "query planner",
+        "index",
+        "indexing",
+        "b-tree index",
+        "lsm tree",
+        "sstable",
+        "compaction",
+        "acid",
+        "transaction",
+        "deadlock",
+        "lock contention",
+        "vacuum",
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "mongodb",
+        "cassandra",
+        "dynamodb",
+        "rocksdb",
+        "leveldb",
+        "clickhouse",
+        "columnar",
+        "row store",
+        "column store",
+        "oltp",
+        "olap",
+        "data warehouse",
+        "data lake",
+        "schema",
+        "normalization",
+        "denormalization",
+        "foreign key",
+        "join",
+        "execution plan",
+        "explain analyze",
+        "write amplification",
+        "read amplification",
+        "storage engine",
+        "wal",
+        "checkpoint",
+        "connection pool",
+        "cursor",
+        "pagination",
+        "full text search",
+        "vector database",
+        "embedding",
+      ],
+
+      "software-engineering": [
+        "software architecture",
+        "clean code",
+        "refactoring",
+        "design pattern",
+        "solid",
+        "single responsibility",
+        "open closed",
+        "dependency injection",
+        "coupling",
+        "cohesion",
+        "abstraction",
+        "encapsulation",
+        "modularity",
+        "technical debt",
+        "code review",
+        "testing",
+        "unit test",
+        "integration test",
+        "tdd",
+        "test driven",
+        "ci cd",
+        "continuous integration",
+        "continuous deployment",
+        "deployment",
+        "devops",
+        "infrastructure as code",
+        "docker",
+        "kubernetes",
+        "container",
+        "performance",
+        "profiling",
+        "benchmarking",
+        "memory management",
+        "garbage collection",
+        "concurrency",
+        "parallelism",
+        "thread",
+        "async",
+        "non blocking",
+        "event loop",
+        "compiler",
+        "runtime",
+        "memory layout",
+        "cache line",
+        "branch prediction",
+        "simd",
+        "zero copy",
+        "engineering culture",
+        "on call",
+        "post mortem",
+        "incident",
+        "runbook",
+        "sla",
+        "slo",
+        "error budget",
+        "api design",
+        "rest",
+        "grpc",
+        "graphql",
+        "versioning",
       ],
     };
 
@@ -201,7 +415,7 @@ class Extract {
   }
 
   private extractInternalLinks($: any, pageUrl: string): string[] {
-    const domain = new URL(pageUrl).hostname;
+    const sourceDomain = new URL(pageUrl).hostname;
     const links: string[] = [];
 
     $("a[href]").each((i: unknown, elem: unknown) => {
@@ -209,19 +423,15 @@ class Extract {
         const href = $(elem).attr("href");
         if (!href) return;
 
-        const absoluteUrl = new URL(href, pageUrl).toString();
-
-        if (
-          new URL(absoluteUrl).hostname === domain &&
-          !absoluteUrl.includes("#")
-        ) {
+        const absoluteUrl = normalizeQueueUrl(new URL(href, pageUrl).toString());
+        if (isLikelyArticleUrl(absoluteUrl, sourceDomain)) {
           links.push(absoluteUrl);
         }
-      } catch (e) {
-        console.log("Invalid url");
+      } catch {
+        return;
       }
     });
 
-    return [...new Set(links)]; // Deduplicate
+    return [...new Set(links)];
   }
 }

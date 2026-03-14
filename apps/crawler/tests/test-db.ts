@@ -1,4 +1,5 @@
 import { db } from "../database/db";
+// Uses bun:sqlite via db module
 
 
 function runTest() {
