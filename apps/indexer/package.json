@@ -1,0 +1,16 @@
+{
+  "name": "indexer",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/natural": "^6.0.1",
+    "natural": "^8.1.1"
+  }
+}
