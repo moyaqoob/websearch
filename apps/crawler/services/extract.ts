@@ -15,22 +15,16 @@ export class Extract {
 
     const title = this.extractTitle($, html);
     const content = this.extractContent($);
-    const snippet = content.substring(0, 200);
     const author = this.extractAuthor($);
     const publishedDate = this.extractDate($);
     const wordCount = content.split(/\s+/).filter((w) => w.length > 0).length;
     const category = this.detectCategory(title, content);
     const discoveredUrls = this.extractInternalLinks($, url);
-
     return {
       article: {
         title,
-        snippet,
         content,
-        author,
         published_date: publishedDate,
-        word_count: wordCount,
-        category,
       },
       discoveredUrls,
     };
@@ -90,31 +84,8 @@ export class Extract {
     return null;
   }
 
-  private extractCodeBlocks($: any): Array<{ code: string; language: string }> {
-    const blocks: Array<{ code: string; language: string }> = [];
 
-    $("pre code, code.language-*").each(
-      (i: cheerio.CheerioAPI, elem: cheerio.CheerioAPI) => {
-        const code = $(elem).text().trim();
-        if (code.length > 20 && code.length < 5000) {
-          blocks.push({
-            code,
-            language: this.detectCodeLanguage(code),
-          });
-        }
-      },
-    );
-
-    return blocks;
-  }
-
-  private detectCodeLanguage(code: string): string {
-    if (/def\s+\w+|import\s+\w+/.test(code)) return "python";
-    if (/function\s+\w+|const\s+|=>/.test(code)) return "javascript";
-    if (/public\s+class|System\.out/.test(code)) return "java";
-    if (/#include|std::/.test(code)) return "cpp";
-    return "unknown";
-  }
+  
 
   private detectCategory(title: string, content: string): string | null {
     const text = (title + " " + content).toLowerCase();
@@ -417,21 +388,32 @@ export class Extract {
   private extractInternalLinks($: any, pageUrl: string): string[] {
     const sourceDomain = new URL(pageUrl).hostname;
     const links: string[] = [];
+    let rawCount = 0;
+    let normalizedCount = 0;
+    let filteredCount = 0;
 
-    $("a[href]").each((i: unknown, elem: unknown) => {
+    $("a[href]").each((_i: number, elem: unknown) => {
+      rawCount++;
       try {
         const href = $(elem).attr("href");
-        if (!href) return;
+        if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
 
         const absoluteUrl = normalizeQueueUrl(new URL(href, pageUrl).toString());
+        normalizedCount++;
+
         if (isLikelyArticleUrl(absoluteUrl, sourceDomain)) {
           links.push(absoluteUrl);
+          filteredCount++;
         }
       } catch {
         return;
       }
     });
 
-    return [...new Set(links)];
+    const unique = [...new Set(links)];
+    console.log(
+      `  Links: ${rawCount} raw → ${normalizedCount} normalized → ${filteredCount} passed filter → ${unique.length} unique`
+    );
+    return unique;
   }
 }

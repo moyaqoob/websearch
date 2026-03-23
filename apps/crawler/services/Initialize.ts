@@ -50,65 +50,71 @@ export class Initialize {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS articles (
         id TEXT PRIMARY KEY,
-        url TEXT UNIQUE NOT NULL,
-        url_normalized TEXT,
-        domain TEXT NOT NULL,
+        url TEXT NOT NULL,
+        url_normalized TEXT NOT NULL,
+        domain TEXT,
         title TEXT NOT NULL,
-        snippet TEXT,
         content TEXT,
-        word_count INTEGER,
-        author TEXT,
-        published_date TEXT,
-        updated_date TEXT,
-        crawl_timestamp TEXT,
-        category TEXT,
-        difficulty TEXT,
-        quality_score INTEGER,
-        readability_score INTEGER,
-        authority_score INTEGER,
-        freshness_score INTEGER,
-        popularity_score INTEGER,
         content_hash TEXT UNIQUE,
-        source_tier TEXT,
         is_indexed INTEGER DEFAULT 0,
-        s3_snippet_key TEXT,
-        s3_content_key TEXT,
-        embedding_vector_json TEXT
+        crawl_timestamp TEXT,
+        published_date TEXT,
+        UNIQUE(url_normalized)
       );
-
+  
+      CREATE TABLE IF NOT EXISTS signals (
+        article_id TEXT PRIMARY KEY,
+        quality_score REAL DEFAULT 0,
+        readability_score REAL DEFAULT 0,
+        authority_score REAL DEFAULT 0,
+        freshness_score REAL DEFAULT 0,
+        popularity_score REAL DEFAULT 0,
+        computed_at TEXT,
+        FOREIGN KEY(article_id) REFERENCES articles(id) ON DELETE CASCADE
+      );
+  
       CREATE TABLE IF NOT EXISTS seed_urls (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT UNIQUE NOT NULL,
         domain TEXT,
-        crawled BOOLEAN DEFAULT 0,
-        crawled_at TIMESTAMP,
+        crawled INTEGER DEFAULT 0,
+        crawled_at TEXT,
         articles_found INTEGER DEFAULT 0,
         links_discovered INTEGER DEFAULT 0,
-        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        added_at TEXT DEFAULT (strftime('%s','now'))
       );
-
+  
       CREATE TABLE IF NOT EXISTS url_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT UNIQUE NOT NULL,
         domain TEXT,
         source TEXT DEFAULT 'discovered',
         priority INTEGER DEFAULT 0,
-        crawled BOOLEAN DEFAULT 0,
-        crawled_at TIMESTAMP,
-        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        crawled INTEGER DEFAULT 0,
+        crawled_at TEXT,
+        added_at TEXT DEFAULT (strftime('%s','now'))
       );
-
+  
       CREATE INDEX IF NOT EXISTS idx_seed_urls_crawled
         ON seed_urls(crawled);
-
+  
       CREATE INDEX IF NOT EXISTS idx_url_queue_crawled
         ON url_queue(crawled);
-
+  
+      CREATE INDEX IF NOT EXISTS idx_url_queue_priority
+        ON url_queue(priority DESC, added_at ASC);
+  
       CREATE INDEX IF NOT EXISTS idx_articles_url
         ON articles(url);
-
+  
+      CREATE INDEX IF NOT EXISTS idx_articles_domain
+        ON articles(domain);
+  
       CREATE INDEX IF NOT EXISTS idx_articles_content_hash
         ON articles(content_hash);
+  
+      CREATE INDEX IF NOT EXISTS idx_articles_is_indexed
+        ON articles(is_indexed);
     `);
   }
 
@@ -235,6 +241,8 @@ export class Initialize {
       return { inserted: 0, duplicates: 0, invalid: 0, discarded: 0 };
     }
 
+    console.log(`  addDiscoveredUrls: received ${urls.length} URLs from ${sourceDomain}, seenUrls size: ${this.seenUrls.size}`);
+
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO url_queue (url, domain, source, crawled)
       VALUES (?, ?, 'discovered', 0)
@@ -279,6 +287,10 @@ export class Initialize {
     });
 
     insertMany(urls);
+
+    const queueCount = (this.db.prepare("SELECT COUNT(*) as count FROM url_queue").get() as { count: number }).count;
+    console.log(`  addDiscoveredUrls result: +${stats.inserted} inserted, ${stats.duplicates} dups, ${stats.discarded} discarded, ${stats.invalid} invalid | url_queue total: ${queueCount}`);
+
     return stats;
   }
 

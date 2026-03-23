@@ -1,10 +1,10 @@
 import { Database } from "bun:sqlite";
-import type { CrawledArticle } from "../utils/index";
+import type { CrawledArticle, RankedSignals } from "../utils/index";
 
 export class Validate {
   constructor(private db: Database) {}
 
-  validate(article: Partial<CrawledArticle>): boolean {
+  validate(article: CrawledArticle): boolean {
     if (!article.title || article.title.length < 5) {
       return false;
     }

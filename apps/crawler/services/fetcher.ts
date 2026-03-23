@@ -42,10 +42,11 @@ export class Fetcher {
 
       const contentLength = Number(response.headers.get("content-length") ?? 0);
 
-      if (contentLength && contentLength > MAX_RESPONSE_BYTES) {
+      if (contentLength > MAX_RESPONSE_BYTES) {
         console.error(`Fetch skipped: response too large (${contentLength})`);
         return null;
       }
+
 
 
       const html = response.text()

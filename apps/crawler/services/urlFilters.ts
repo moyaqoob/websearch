@@ -1,4 +1,8 @@
-import { TIER_CONFIG } from "./Calculate";
+import { SOURCE_CONFIG, type AuthorityLevel } from "../utils/config";
+
+// ---------------------------------------------------------------------------
+// URL DISCARD PATTERNS — structural noise, never articles
+// ---------------------------------------------------------------------------
 
 export const DISCARD_URL_PATTERNS: RegExp[] = [
   /\/m\/signin/,
@@ -28,26 +32,7 @@ export const DISCARD_URL_PATTERNS: RegExp[] = [
   /\/blog\/?$/,
   /\/articles\/?$/,
   /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|pdf|zip)$/i,
-  /\/\d+\/?$/,
-];
-
-export const DSA_URL_SIGNALS: RegExp[] = [
-  /\/problems?\//,
-  /\/algorithms?\//,
-  /\/data-structures?\//,
-  /\/dynamic-programming/,
-  /\/graph/,
-  /\/tree/,
-  /\/sorting/,
-  /\/searching/,
-  /\/system-design/,
-  /\/distributed/,
-  /\/interview/,
-  /\/solutions?\//,
-  /\/tutorials?\//,
-  /\/learn\//,
-  /\/courses?\//,
-  /\/articles?\//,
+  /^https?:\/\/[^/]+\/\d+\/?$/,
 ];
 
 export const GENERIC_PATH_BLOCKLIST: RegExp[] = [
@@ -68,6 +53,27 @@ export const GENERIC_PATH_BLOCKLIST: RegExp[] = [
   /\/newsletter\/?$/,
 ];
 
+// DSA_URL_SIGNALS only used for COMMUNITY/UNKNOWN sources
+// CANONICAL and INSTITUTIONAL sources are trusted unconditionally on path
+export const DSA_URL_SIGNALS: RegExp[] = [
+  /\/problems?\//,
+  /\/algorithms?\//,
+  /\/data-structures?\//,
+  /\/dynamic-programming/,
+  /\/graph/,
+  /\/tree/,
+  /\/sorting/,
+  /\/searching/,
+  /\/system-design/,
+  /\/distributed/,
+  /\/interview/,
+  /\/solutions?\//,
+  /\/tutorials?\//,
+  /\/learn\//,
+  /\/courses?\//,
+  /\/articles?\//,
+];
+
 const TRACKING_PARAMS = new Set([
   "source",
   "ref",
@@ -76,16 +82,42 @@ const TRACKING_PARAMS = new Set([
   "utm_campaign",
 ]);
 
-const KNOWN_TIER_DOMAINS = new Set(
-  Object.entries(TIER_CONFIG)
-    .filter(([tier]) => tier !== "TIER_6_UNKNOWN")
-    .flatMap(([, config]) => config.domains)
+// ---------------------------------------------------------------------------
+// DOMAIN LOOKUP TABLES — built once at module load from SOURCE_CONFIG
+// ---------------------------------------------------------------------------
+
+// Every known domain across all source profiles
+const ALL_KNOWN_DOMAINS = new Set(
+  Object.values(SOURCE_CONFIG)
+    .flatMap((config) => config.domains)
     .map((domain) => normalizeHostname(domain)),
 );
 
-const TIER1_DOMAINS = new Set(
-  TIER_CONFIG.TIER_1_PREMIUM.domains.map((domain) => normalizeHostname(domain)),
+// High-trust sources — CANONICAL and INSTITUTIONAL authority
+// These get through without DSA_URL_SIGNALS matching
+// Derived from authority level, not hardcoded tier names
+const HIGH_AUTHORITY_DOMAINS = new Set(
+  Object.values(SOURCE_CONFIG)
+    .filter((config) => 
+      config.authority === "CANONICAL" || 
+      config.authority === "INSTITUTIONAL"
+    )
+    .flatMap((config) => config.domains)
+    .map((domain) => normalizeHostname(domain)),
 );
+
+// Medium trust — ESTABLISHED authors, known publications
+// Still trusted on path but monitored more carefully
+const ESTABLISHED_DOMAINS = new Set(
+  Object.values(SOURCE_CONFIG)
+    .filter((config) => config.authority === "ESTABLISHED")
+    .flatMap((config) => config.domains)
+    .map((domain) => normalizeHostname(domain)),
+);
+
+// ---------------------------------------------------------------------------
+// NORMALIZATION
+// ---------------------------------------------------------------------------
 
 export function normalizeHostname(hostname: string): string {
   return hostname.trim().toLowerCase().replace(/^www\./, "");
@@ -98,13 +130,71 @@ export function normalizeQueueUrl(url: string): string {
     for (const key of TRACKING_PARAMS) {
       parsed.searchParams.delete(key);
     }
-
-    const normalized = parsed.toString().replace(/\/$/, "");
-    return normalized;
+    return parsed.toString().replace(/\/$/, "");
   } catch {
     return url;
   }
 }
+
+// ---------------------------------------------------------------------------
+// DOMAIN CLASSIFICATION
+// ---------------------------------------------------------------------------
+
+export function getAuthorityLevel(hostname: string): AuthorityLevel | null {
+  const normalized = normalizeHostname(hostname);
+
+  for (const [, config] of Object.entries(SOURCE_CONFIG)) {
+    for (const domain of config.domains) {
+      const nd = normalizeHostname(domain);
+      if (normalized === nd || normalized.endsWith(`.${nd}`)) {
+        return config.authority;
+      }
+    }
+  }
+
+  return null; // not in config at all
+}
+
+export function isKnownDomain(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  for (const domain of ALL_KNOWN_DOMAINS) {
+    if (normalized === domain || normalized.endsWith(`.${domain}`)) return true;
+  }
+  return false;
+}
+
+export function isHighAuthorityDomain(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  for (const domain of HIGH_AUTHORITY_DOMAINS) {
+    if (normalized === domain || normalized.endsWith(`.${domain}`)) return true;
+  }
+  return false;
+}
+
+export function isEstablishedDomain(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  for (const domain of ESTABLISHED_DOMAINS) {
+    if (normalized === domain || normalized.endsWith(`.${domain}`)) return true;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// MEDIUM — platform-specific article detection
+// Medium is a platform, not a source. Only accept article-shaped URLs.
+// ---------------------------------------------------------------------------
+
+export function isMediumArticleUrl(url: string): boolean {
+  const path = new URL(url).pathname;
+  return (
+    /^\/@[^/]+\/[^/]+$/.test(path) ||
+    /^\/[^@m][^/]*\/[^/]{20,}$/.test(path)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CORE DISCARD LOGIC
+// ---------------------------------------------------------------------------
 
 export function shouldDiscardUrl(url: string): boolean {
   try {
@@ -118,30 +208,18 @@ export function shouldDiscardUrl(url: string): boolean {
   }
 }
 
-export function isMediumArticleUrl(url: string): boolean {
-  const path = new URL(url).pathname;
-  return /^\/@[^/]+\/[^/]+$/.test(path) || /^\/[^@m][^/]*\/[^/]{20,}$/.test(path);
-}
-
-export function isKnownTierDomain(hostname: string): boolean {
-  const normalized = normalizeHostname(hostname);
-  for (const domain of KNOWN_TIER_DOMAINS) {
-    if (normalized === domain || normalized.endsWith(`.${domain}`)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function isInTier1(hostname: string): boolean {
-  const normalized = normalizeHostname(hostname);
-  for (const domain of TIER1_DOMAINS) {
-    if (normalized === domain || normalized.endsWith(`.${domain}`)) {
-      return true;
-    }
-  }
-  return false;
-}
+// ---------------------------------------------------------------------------
+// MAIN GATE — is this URL worth queueing?
+//
+// Decision tree:
+//   1. Hard discard? → reject
+//   2. Generic path (about, careers...)? → reject
+//   3. Medium but not article-shaped? → reject
+//   4. Not from known domain AND not same origin? → reject
+//   5. CANONICAL or INSTITUTIONAL domain? → accept unconditionally
+//   6. ESTABLISHED domain? → accept if not generic path (already checked)
+//   7. COMMUNITY or UNKNOWN? → require DSA_URL_SIGNALS match
+// ---------------------------------------------------------------------------
 
 export function isLikelyArticleUrl(url: string, sourceDomain: string): boolean {
   if (shouldDiscardUrl(url)) return false;
@@ -149,24 +227,35 @@ export function isLikelyArticleUrl(url: string, sourceDomain: string): boolean {
   const parsed = new URL(url);
   const hostname = normalizeHostname(parsed.hostname);
   const normalizedSource = normalizeHostname(sourceDomain);
+  const pathAndQuery = parsed.pathname + parsed.search;
 
+  // Medium is a platform — apply article shape detection
   if (hostname.includes("medium.com") && !isMediumArticleUrl(url)) {
     return false;
   }
 
-  if (hostname !== normalizedSource && !isKnownTierDomain(hostname)) {
+  // Don't follow links off-domain to unknown territory
+  if (hostname !== normalizedSource && !isKnownDomain(hostname)) {
     return false;
   }
 
+  // Generic paths are noise regardless of domain authority
   if (GENERIC_PATH_BLOCKLIST.some((pattern) => pattern.test(parsed.pathname))) {
     return false;
   }
 
-  if (isInTier1(hostname)) {
+  // CANONICAL + INSTITUTIONAL: trust the source, don't require signal matching
+  // Netflix engineering posts don't have /algorithms/ in the URL
+  if (isHighAuthorityDomain(hostname)) {
     return true;
   }
 
-  return DSA_URL_SIGNALS.some((signal) =>
-    signal.test(parsed.pathname + parsed.search),
-  );
+  // ESTABLISHED authors: same — trust the domain
+  if (isEstablishedDomain(hostname)) {
+    return true;
+  }
+
+  // COMMUNITY + UNKNOWN: require URL to signal relevance before queueing
+  // This is your last line of defense against off-topic content
+  return DSA_URL_SIGNALS.some((signal) => signal.test(pathAndQuery));
 }

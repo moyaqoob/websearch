@@ -1,12 +1,13 @@
-import type Database from 'better-sqlite3';
+import type {Database} from 'bun:sqlite';
 import type {
   Article,
   IndexingResult,
   IndexingError,
   TokenWithMetadata,
-} from '../types/index.js';
+} from '../types/utils.ts';
 import { textProcessor } from '../shared/text-processor.js';
 import { INDEX_SCHEMA_SQL } from '../shared/schema.js';
+import type { Statement } from '../query/query-engine.ts';
 
 // ============================================================
 // Indexer
@@ -38,24 +39,24 @@ import { INDEX_SCHEMA_SQL } from '../shared/schema.js';
 // ============================================================
 
 interface PreparedStatements {
-  upsertTerm: Database.Statement;
-  getTermId: Database.Statement;
-  insertPosting: Database.Statement;
-  deletePostingsForDoc: Database.Statement;
-  decrementDocFreq: Database.Statement;
-  upsertDocLength: Database.Statement;
-  markArticleIndexed: Database.Statement;
-  getUnindexedArticles: Database.Statement;
-  getIndexedHashForDoc: Database.Statement;
-  updateCorpusStats: Database.Statement;
-  getDocLength: Database.Statement;
+  upsertTerm: Statement;
+  getTermId: Statement;
+  insertPosting: Statement;
+  deletePostingsForDoc: Statement;
+  decrementDocFreq: Statement;
+  upsertDocLength: Statement;
+  markArticleIndexed: Statement;
+  getUnindexedArticles: Statement;
+  getIndexedHashForDoc: Statement;
+  updateCorpusStats: Statement;
+  getDocLength: Statement;
 }
 
 export class Indexer {
-  private db: Database.Database;
+  private db: Database;
   private stmts!: PreparedStatements;
 
-  constructor(db: Database.Database) {
+  constructor(db: Database) {
     this.db = db;
     this.initialize();
   }

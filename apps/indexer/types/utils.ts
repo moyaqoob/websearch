@@ -18,7 +18,31 @@ export interface Article {
     s3_snippet_key: string | null;
     embedding_vector_json: string | null;
   }
+  export interface CorpusStats {
+    total_documents: number;
+    avg_document_length: number;
+  }
   
+  export interface PostingRow {
+    doc_id: number;
+    term_frequency: number;
+    title_tf: number;
+    content_tf: number;
+    doc_freq: number;
+    doc_length: number;
+  }
+  
+  export interface ArticleRow {
+    id: number;
+    url: string;
+    title: string;
+    content: string;
+    author: string | null;
+    published_date: string | null;
+    quality_score: number;
+    authority_score: number;
+    freshness_score: number;
+  }
   // ============================================================
   // Inverted Index Types
   // The posting list is the fundamental data structure.
