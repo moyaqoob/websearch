@@ -1,26 +1,25 @@
-import type Database from 'bun:sqlite';
+import Database from "bun:sqlite";
+import { textProcessor } from "../shared/text-processor.ts";
 import type {
-  QueryOptions,
-  SearchResult,
-  ScoreBreakdown,
-  CorpusStats,
-  PostingRow,
   ArticleRow,
-} from '../types/utils.ts';
-import { DEFAULT_WEIGHTS, DEFAULT_BM25_PARAMS } from '../types/utils.ts';
-import { textProcessor } from '../shared/text-processor.ts';
-import { BM25Scorer } from './bm25.ts';
-import { ScoreNormalizer, type RawCandidateScore } from './normalizer.ts';
+  CorpusStats,
+  IndexedArticle,
+  PostingRow,
+  QueryOptions,
+  ScoreBreakdown,
+  SearchResult,
+} from "../types/utils.ts";
+import { DEFAULT_BM25_PARAMS, DEFAULT_WEIGHTS } from "../types/utils.ts";
+import { BM25Scorer } from "./bm25.ts";
+import { ScoreNormalizer, type RawCandidateScore } from "./normalizer.ts";
 
 export type Statement = ReturnType<Database["query"]>;
-
 
 export class QueryEngine {
   private db: Database;
   private bm25: BM25Scorer;
   private normalizer: ScoreNormalizer;
 
-  // Prepared statements — prepared once, executed many times
   private stmtCorpusStats: Statement;
   private stmtPostingsForTerm: Statement;
   private stmtArticlesByIds: Statement;
@@ -36,8 +35,6 @@ export class QueryEngine {
       FROM index_metadata WHERE id = 1
     `);
 
-    // Fetch posting list for a term, joining with doc_lengths for
-    // BM25 normalization. Single query — no N+1 problem.
     this.stmtPostingsForTerm = this.db.prepare(`
       SELECT
         p.doc_id,
@@ -52,14 +49,19 @@ export class QueryEngine {
       WHERE t.term = ?
     `);
 
-    // Fetch article metadata for a set of doc IDs.
-    // SQLite doesn't support array parameters, so we build
-    // the IN clause dynamically (see fetchArticles method).
     this.stmtArticlesByIds = this.db.prepare(`
-      SELECT id, url, title, content, author, published_date,
-             quality_score, authority_score, freshness_score
-      FROM articles
-      WHERE id IN (SELECT value FROM json_each(?))
+      SELECT 
+        a.id,
+        a.url,
+        a.title,
+        a.content,
+        a.published_date,
+        s.quality_score,
+        s.authority_score,
+        s.freshness_score
+      FROM articles a
+      LEFT JOIN signals s ON s.article_id = a.id
+      WHERE a.id IN (SELECT value FROM json_each(?))
     `);
 
     this.stmtDocLength = this.db.prepare(`
@@ -88,14 +90,19 @@ export class QueryEngine {
     const queryTerms = textProcessor.tokenizeQuery(query);
 
     if (queryTerms.length === 0) {
-      console.warn('[QueryEngine] Query produced no tokens after processing:', query);
+      console.warn(
+        "[QueryEngine] Query produced no tokens after processing:",
+        query,
+      );
       return [];
     }
 
     // Step 2: Fetch corpus stats
     const stats = this.stmtCorpusStats.get() as CorpusStats | undefined;
     if (!stats || stats.total_documents === 0) {
-      console.warn('[QueryEngine] No indexed documents found. Run the indexer first.');
+      console.warn(
+        "[QueryEngine] No indexed documents found. Run the indexer first.",
+      );
       return [];
     }
 
@@ -113,13 +120,13 @@ export class QueryEngine {
           posting.doc_length,
           stats.avg_document_length,
           stats.total_documents,
-          posting.doc_freq
+          posting.doc_freq,
         );
 
         // Accumulate score across query terms (standard BM25 for multi-term)
         docScores.set(
           posting.doc_id,
-          (docScores.get(posting.doc_id) ?? 0) + termScore
+          (docScores.get(posting.doc_id) ?? 0) + termScore,
         );
       }
     }
@@ -143,8 +150,13 @@ export class QueryEngine {
       if (!article) continue; // Stale index entry — article was deleted
 
       // Filters
-      if (min_quality !== undefined && article.quality_score < min_quality) continue;
-      if (min_authority !== undefined && article.authority_score < min_authority) continue;
+      if (min_quality !== undefined && article.quality_score < min_quality)
+        continue;
+      if (
+        min_authority !== undefined &&
+        article.authority_score < min_authority
+      )
+        continue;
       if (date_after && article.published_date) {
         if (new Date(article.published_date) < new Date(date_after)) continue;
       }
@@ -154,7 +166,6 @@ export class QueryEngine {
         url: article.url,
         title: article.title,
         content: article.content,
-        author: article.author,
         published_date: article.published_date,
         bm25_raw: bm25Raw,
         quality_score: article.quality_score,
@@ -197,7 +208,6 @@ export class QueryEngine {
         url: c.url,
         title: c.title,
         snippet,
-        author: c.author,
         published_date: c.published_date,
         scores: explain ? scores : { ...scores }, // always include when explain=true
         final_score: finalScore,
@@ -242,12 +252,14 @@ export class QueryEngine {
 
     for (const docId of matchingDocIds) {
       const terms = this.db
-        .prepare(`
+        .prepare(
+          `
           SELECT t.term, t.doc_freq
           FROM index_postings p
           JOIN index_terms t ON t.term_id = p.term_id
           WHERE p.doc_id = ?
-        `)
+        `,
+        )
         .all(docId) as { term: string; doc_freq: number }[];
 
       for (const { term, doc_freq } of terms) {
@@ -277,16 +289,16 @@ export class QueryEngine {
     unindexed_docs: number;
   } {
     const meta = this.db
-      .prepare('SELECT * FROM index_metadata WHERE id = 1')
+      .prepare("SELECT * FROM index_metadata WHERE id = 1")
       .get() as {
-        total_documents: number;
-        avg_document_length: number;
-        total_terms: number;
-        last_updated: string;
-      };
+      total_documents: number;
+      avg_document_length: number;
+      total_terms: number;
+      last_updated: string;
+    };
 
     const unindexed = this.db
-      .prepare('SELECT COUNT(*) as count FROM articles WHERE is_indexed = 0')
+      .prepare("SELECT COUNT(*) as count FROM articles WHERE is_indexed = 0")
       .get() as { count: number };
 
     return {

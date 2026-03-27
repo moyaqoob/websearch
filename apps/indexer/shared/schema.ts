@@ -37,32 +37,29 @@
 // ============================================================
 
 export const INDEX_SCHEMA_SQL = `
-  -- Vocabulary: term string → integer ID
-  -- This is the dictionary of the inverted index.
   CREATE TABLE IF NOT EXISTS index_terms (
     term_id   INTEGER PRIMARY KEY AUTOINCREMENT,
     term      TEXT    NOT NULL UNIQUE,
-    doc_freq  INTEGER NOT NULL DEFAULT 0  
+    doc_freq  INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_terms_term ON index_terms(term);
 
-  -- Postings: one row per (term, document) pair
   CREATE TABLE IF NOT EXISTS index_postings (
     term_id        INTEGER NOT NULL REFERENCES index_terms(term_id) ON DELETE CASCADE,
-    doc_id         INTEGER NOT NULL,  
-    term_frequency INTEGER NOT NULL, 
+    doc_id         TEXT    NOT NULL,
+    term_frequency INTEGER NOT NULL,
     title_tf       INTEGER NOT NULL DEFAULT 0,
     content_tf     INTEGER NOT NULL DEFAULT 0,
-    positions_json TEXT    NOT NULL,  
+    positions_json TEXT    NOT NULL,
     PRIMARY KEY (term_id, doc_id)
   );
   CREATE INDEX IF NOT EXISTS idx_postings_term ON index_postings(term_id);
   CREATE INDEX IF NOT EXISTS idx_postings_doc  ON index_postings(doc_id);
 
   CREATE TABLE IF NOT EXISTS index_doc_lengths (
-    doc_id     INTEGER PRIMARY KEY, 
+    doc_id     TEXT    PRIMARY KEY,
     doc_length INTEGER NOT NULL,
-    indexed_at TEXT    NOT NULL      
+    indexed_at TEXT    NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS index_metadata (

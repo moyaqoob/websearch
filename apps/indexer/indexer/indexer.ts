@@ -1,42 +1,13 @@
-import type {Database} from 'bun:sqlite';
+import type { Database } from 'bun:sqlite';
 import type {
-  Article,
+  IndexedArticle,
   IndexingResult,
   IndexingError,
   TokenWithMetadata,
 } from '../types/utils.ts';
-import { textProcessor } from '../shared/text-processor.js';
-import { INDEX_SCHEMA_SQL } from '../shared/schema.js';
+import { textProcessor } from '../shared/text-processor.ts';
+import { INDEX_SCHEMA_SQL } from '../shared/schema.ts';
 import type { Statement } from '../query/query-engine.ts';
-
-// ============================================================
-// Indexer
-//
-// Responsible for:
-//   1. Tokenizing articles (title + content)
-//   2. Building/updating the inverted index tables
-//   3. Maintaining corpus-level statistics (avgdl, total docs)
-//   4. Marking articles as indexed in your articles table
-//
-// Design: incremental by default.
-// The indexer checks `is_indexed` and `content_hash`. If an
-// article is already indexed AND the hash is unchanged, it's
-// skipped. If the hash changed (re-crawled, updated content),
-// the old postings are deleted and re-indexed. This means
-// you can call indexAll() repeatedly and it's idempotent.
-//
-// Transaction strategy:
-// Each article is indexed in its own transaction. This is a
-// deliberate tradeoff. Batching across many articles would be
-// faster (fewer fsync calls) but a failure mid-batch would
-// leave partial state. Per-article transactions mean any crash
-// leaves the index in a consistent state — the failed article
-// just stays `is_indexed = 0` and gets picked up on next run.
-//
-// At 10k articles, per-article transactions are fast enough
-// (~2-5ms per article on modern hardware). At 100k+, consider
-// batching 100 articles per transaction.
-// ============================================================
 
 interface PreparedStatements {
   upsertTerm: Statement;
@@ -52,6 +23,7 @@ interface PreparedStatements {
   getDocLength: Statement;
 }
 
+
 export class Indexer {
   private db: Database;
   private stmts!: PreparedStatements;
@@ -62,17 +34,12 @@ export class Indexer {
   }
 
   private initialize(): void {
-    // Create index tables if they don't exist
     this.db.exec(INDEX_SCHEMA_SQL);
 
-    // Prepare all statements once — a massive performance win.
-    // SQLite statement preparation is expensive; doing it once
-    // per indexer instance and reusing across thousands of articles
-    // is the difference between 2ms and 0.02ms per operation.
     this.stmts = {
       upsertTerm: this.db.prepare(`
         INSERT INTO index_terms (term, doc_freq)
-        VALUES (@term, 1)
+        VALUES ($term, 1)
         ON CONFLICT(term) DO UPDATE SET doc_freq = doc_freq + 1
         RETURNING term_id
       `),
@@ -84,14 +51,13 @@ export class Indexer {
       insertPosting: this.db.prepare(`
         INSERT OR REPLACE INTO index_postings
           (term_id, doc_id, term_frequency, title_tf, content_tf, positions_json)
-        VALUES (@term_id, @doc_id, @term_frequency, @title_tf, @content_tf, @positions_json)
+        VALUES ($term_id, $doc_id, $term_frequency, $title_tf, $content_tf, $positions_json)
       `),
 
       deletePostingsForDoc: this.db.prepare(`
         DELETE FROM index_postings WHERE doc_id = ?
       `),
 
-      // When removing a doc's postings, decrement doc_freq for each affected term
       decrementDocFreq: this.db.prepare(`
         UPDATE index_terms
         SET doc_freq = MAX(0, doc_freq - 1)
@@ -102,23 +68,26 @@ export class Indexer {
 
       upsertDocLength: this.db.prepare(`
         INSERT OR REPLACE INTO index_doc_lengths (doc_id, doc_length, indexed_at)
-        VALUES (@doc_id, @doc_length, datetime('now'))
+        VALUES ($doc_id, $doc_length, datetime('now'))
       `),
 
+      // ── your actual table and column names ──────────────────
       markArticleIndexed: this.db.prepare(`
         UPDATE articles SET is_indexed = 1 WHERE id = ?
       `),
 
+      // JOIN articles with signals to get scores in one query
       getUnindexedArticles: this.db.prepare(`
-        SELECT id, url, title, content, author, published_date,
-               quality_score, authority_score, freshness_score,
-               content_hash, is_indexed, s3_snippet_key, embedding_vector_json
-        FROM articles
-        WHERE is_indexed = 0
-          AND content IS NOT NULL
-          AND LENGTH(content) > 50
-        ORDER BY authority_score DESC, quality_score DESC
-        LIMIT @limit OFFSET @offset
+        SELECT
+          a.id, a.url, a.url_normalized, a.domain,
+          a.title, a.content, a.is_indexed,
+          a.crawl_timestamp, a.content_hash,
+          s.quality_score, s.authority_score, s.freshness_score
+        FROM articles a
+        JOIN signals s ON s.article_id = a.id
+        WHERE a.is_indexed = 0
+        ORDER BY s.authority_score DESC, s.quality_score DESC
+        LIMIT $limit OFFSET $offset
       `),
 
       getIndexedHashForDoc: this.db.prepare(`
@@ -128,7 +97,7 @@ export class Indexer {
       updateCorpusStats: this.db.prepare(`
         UPDATE index_metadata SET
           total_documents     = (SELECT COUNT(*) FROM index_doc_lengths),
-          avg_document_length = (SELECT AVG(doc_length) FROM index_doc_lengths),
+          avg_document_length = (SELECT COALESCE(AVG(doc_length), 0) FROM index_doc_lengths),
           total_terms         = (SELECT COUNT(*) FROM index_terms),
           last_updated        = datetime('now')
         WHERE id = 1
@@ -140,151 +109,144 @@ export class Indexer {
     };
   }
 
-  /**
-   * Index all unindexed articles.
-   * Call this after each crawl cycle.
-   */
   async indexAll(options: { batchSize?: number } = {}): Promise<IndexingResult> {
-    const { batchSize = 500 } = options;
+    const { batchSize = 5000 } = options;
     const startTime = Date.now();
     const errors: IndexingError[] = [];
-    let processed = 0;
-    let indexed = 0;
-    let skipped = 0;
-    let offset = 0;
-
-    console.log('[Indexer] Starting indexing run...');
-
+    let processed = 0, indexed = 0, skipped = 0, offset = 0;
+  
+    // get total count upfront so we can show progress
+    const total = (this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM articles a
+      JOIN signals s ON s.article_id = a.id
+      WHERE a.is_indexed = 0
+        AND a.content IS NOT NULL
+        AND LENGTH(a.content) > 50
+    `).get() as { count: number }).count;
+  
+    if (total === 0) {
+      console.log('[Indexer] No unindexed articles found.');
+      return { articles_processed: 0, articles_indexed: 0, articles_skipped: 0, errors: [], duration_ms: 0 };
+    }
+  
+    console.log(`\n[Indexer] Starting — ${total.toLocaleString()} articles to process\n`);
+  
     while (true) {
       const articles = this.stmts.getUnindexedArticles.all({
-        limit: batchSize,
-        offset,
-      }) as Article[];
-
+        $limit: batchSize,
+        $offset: offset,
+      }) as IndexedArticle[];
+  
       if (articles.length === 0) break;
-
+  
+      const batchNum = Math.floor(offset / batchSize) + 1;
+      const totalBatches = Math.ceil(total / batchSize);
+      console.log(`[Batch ${batchNum}/${totalBatches}] Processing ${articles.length} articles...`);
+  
       for (const article of articles) {
         try {
           const result = this.indexArticle(article);
-          if (result === 'indexed') indexed++;
-          else skipped++;
+  
+          if (result === 'indexed') {
+            indexed++;
+            console.log(`  ✓ [${indexed + skipped}/${total}] ${article.url}`);
+          } else {
+            skipped++;
+            console.log(`  ○ [${indexed + skipped}/${total}] SKIPPED — ${article.url}`);
+          }
+  
         } catch (err) {
-          errors.push({
-            article_id: article.id,
-            url: article.url,
-            error: err instanceof Error ? err.message : String(err),
-          });
+          const message = err instanceof Error ? err.message : String(err);
+          errors.push({ article_id: article.id, url: article.url, error: message });
+          console.log(`  ✗ [${processed + 1}/${total}] ERROR — ${article.url}`);
+          console.log(`      ${message}`);
         }
+  
         processed++;
       }
-
+  
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const rate = (processed / Number(elapsed)).toFixed(0);
+      console.log(`\n[Batch ${batchNum}/${totalBatches}] Done — ${indexed} indexed, ${skipped} skipped, ${errors.length} errors | ${rate} articles/sec | ${elapsed}s elapsed\n`);
+  
       offset += batchSize;
-
-      if (processed % 100 === 0) {
-        console.log(`[Indexer] Processed ${processed} articles...`);
-      }
     }
-
-    // Update corpus-level stats once at the end, not per article.
-    // This is the correct approach: avgdl is a corpus property,
-    // not a per-document property. Updating it incrementally
-    // per document would give you a moving average that's wrong
-    // for BM25 scoring until the full run completes.
+  
     this.stmts.updateCorpusStats.run();
-
+  
     const duration_ms = Date.now() - startTime;
-    console.log(
-      `[Indexer] Done. ${indexed} indexed, ${skipped} skipped, ` +
-      `${errors.length} errors in ${duration_ms}ms`
-    );
-
+  
+    console.log('─'.repeat(60));
+    console.log(`[Indexer] Complete`);
+    console.log(`  Total processed : ${processed.toLocaleString()}`);
+    console.log(`  Indexed         : ${indexed.toLocaleString()}`);
+    console.log(`  Skipped         : ${skipped.toLocaleString()}`);
+    console.log(`  Errors          : ${errors.length}`);
+    console.log(`  Duration        : ${(duration_ms / 1000).toFixed(2)}s`);
+    console.log(`  Avg speed       : ${(processed / (duration_ms / 1000)).toFixed(0)} articles/sec`);
+    console.log('─'.repeat(60));
+  
+    if (errors.length > 0) {
+      console.log('\n[Indexer] Failed articles:');
+      errors.forEach(e => console.log(`  ✗ ${e.url}\n    ${e.error}`));
+    }
+  
     return { articles_processed: processed, articles_indexed: indexed, articles_skipped: skipped, errors, duration_ms };
   }
 
-  /**
-   * Index a single article.
-   * Returns 'indexed' if work was done, 'skipped' if already current.
-   */
-  indexArticle(article: Article): 'indexed' | 'skipped' {
-    // Check if already indexed with the same content hash
+
+  indexArticle(article: IndexedArticle): 'indexed' | 'skipped' {
     if (article.is_indexed === 1) {
       const existing = this.stmts.getIndexedHashForDoc.get(article.id) as
-        | { content_hash: string }
-        | undefined;
-      if (existing?.content_hash === article.content_hash) {
-        return 'skipped'; // Content unchanged, nothing to do
-      }
-      // Content changed — remove old postings and re-index
+        | { content_hash: string } | undefined;
+      if (existing?.content_hash === article.content_hash) return 'skipped';
       this.removeFromIndex(article.id);
     }
 
-    // Tokenize
     const { tokens, docLength } = textProcessor.tokenizeDocument(
       article.title || '',
       article.content || ''
     );
 
-    if (docLength === 0) return 'skipped'; // Empty document
+    if (docLength === 0) return 'skipped';
 
-    // Group tokens by term
     const termMap = this.buildTermMap(tokens);
 
-    // Write to index in a single transaction
-    const indexFn = this.db.transaction(() => {
+    this.db.transaction(() => {
       for (const [term, data] of termMap) {
-        // Upsert term into vocabulary, get term_id
-        const row = this.stmts.upsertTerm.get({ term }) as { term_id: number };
-        const termId = row.term_id;
+        const row = this.stmts.upsertTerm.get({ $term: term }) as { term_id: number };
 
-        // Insert posting
         this.stmts.insertPosting.run({
-          term_id: termId,
-          doc_id: article.id,
-          term_frequency: data.positions.length,
-          title_tf: data.title_tf,
-          content_tf: data.content_tf,
-          positions_json: JSON.stringify(data.positions),
+          $term_id:        row.term_id,
+          $doc_id:         article.id,   // string — bun:sqlite handles it fine
+          $term_frequency: data.positions.length,
+          $title_tf:       data.title_tf,
+          $content_tf:     data.content_tf,
+          $positions_json: JSON.stringify(data.positions),
         });
       }
 
-      // Record document length
       this.stmts.upsertDocLength.run({
-        doc_id: article.id,
-        doc_length: docLength,
+        $doc_id:     article.id,
+        $doc_length: docLength,
       });
 
-      // Mark as indexed in articles table
       this.stmts.markArticleIndexed.run(article.id);
-    });
+    })();
 
-    indexFn();
     return 'indexed';
   }
 
-  /**
-   * Remove a document from the index.
-   * Called when content hash changes (re-crawled) or doc is deleted.
-   */
-  removeFromIndex(docId: number): void {
-    const removeFn = this.db.transaction(() => {
-      // Decrement doc_freq for all terms this document contained
+  removeFromIndex(docId: string): void {
+    this.db.transaction(() => {
       this.stmts.decrementDocFreq.run(docId);
-      // Remove the postings
       this.stmts.deletePostingsForDoc.run(docId);
-    });
-    removeFn();
+    })();
   }
 
-  /**
-   * Group tokens by term, accumulating positions and field TFs.
-   */
-  private buildTermMap(
-    tokens: TokenWithMetadata[]
-  ): Map<string, { positions: number[]; title_tf: number; content_tf: number }> {
-    const map = new Map<
-      string,
-      { positions: number[]; title_tf: number; content_tf: number }
-    >();
+  private buildTermMap(tokens: TokenWithMetadata[]) {
+    const map = new Map<string, { positions: number[]; title_tf: number; content_tf: number }>();
 
     for (const token of tokens) {
       let entry = map.get(token.term);
@@ -300,41 +262,23 @@ export class Indexer {
     return map;
   }
 
-  /**
-   * Rebuild the entire index from scratch.
-   * WARNING: Marks all articles as is_indexed = 0 first.
-   * Only use when schema changes, re-tokenization needed, etc.
-   */
   rebuildIndex(): void {
-    console.log('[Indexer] Full rebuild requested. Resetting is_indexed flags...');
-
+    console.log('[Indexer] Full rebuild — resetting flags...');
     this.db.transaction(() => {
       this.db.prepare('UPDATE articles SET is_indexed = 0').run();
       this.db.prepare('DELETE FROM index_postings').run();
       this.db.prepare('DELETE FROM index_terms').run();
       this.db.prepare('DELETE FROM index_doc_lengths').run();
     })();
-
     console.log('[Indexer] Reset complete. Call indexAll() to rebuild.');
   }
 
-  /**
-   * Returns corpus statistics — useful for monitoring and debugging.
-   */
-  getStats(): {
-    total_documents: number;
-    avg_document_length: number;
-    total_terms: number;
-    last_updated: string;
-  } {
-    const row = this.db
-      .prepare('SELECT * FROM index_metadata WHERE id = 1')
-      .get() as {
-        total_documents: number;
-        avg_document_length: number;
-        total_terms: number;
-        last_updated: string;
-      };
-    return row;
+  getStats() {
+    return this.db.prepare('SELECT * FROM index_metadata WHERE id = 1').get() as {
+      total_documents: number;
+      avg_document_length: number;
+      total_terms: number;
+      last_updated: string;
+    };
   }
 }

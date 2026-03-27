@@ -90,7 +90,6 @@ export class TextProcessor {
       const cleaned = raw.replace(/^['\-]+|['\-]+$/g, '');
       if (!cleaned || cleaned.length < MIN_TOKEN_LENGTH) continue;
 
-      // Stopword filter — but protect domain-critical terms
       if (!PROTECTED_TERMS.has(cleaned) && STOPWORDS.has(cleaned)) {
         continue;
       }

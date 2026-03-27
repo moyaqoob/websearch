@@ -41,7 +41,6 @@ export interface RawCandidateScore {
     url: string;
     title: string;
     content: string;
-    author: string | null;
     published_date: string | null;
     bm25_raw: number;
     quality_score: number;
@@ -54,7 +53,6 @@ export interface RawCandidateScore {
     url: string;
     title: string;
     content: string;
-    author: string | null;
     published_date: string | null;
     bm25_raw: number;
     bm25_normalized: number;
