@@ -4,9 +4,11 @@ import { Indexer } from './indexer/indexer';
 import { QueryEngine } from './query/query-engine';
 import { INDEX_SCHEMA_SQL } from './shared/schema';
 import { DB_PATH } from './types/config';
+import { ensureDbPresent } from './shared/ensure-db';
 
 const PORT    = Number(process.env.PORT ?? 3000);
 
+await ensureDbPresent();
 const db = new Database(DB_PATH);
 db.run('PRAGMA journal_mode = WAL');
 db.run('PRAGMA cache_size = -65536');

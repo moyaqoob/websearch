@@ -4,6 +4,9 @@ import { DB_PATH } from "./types/config";
 import { Database } from "bun:sqlite";
 import { Indexer } from "./indexer/indexer.ts";
 import { INDEX_SCHEMA_SQL } from "./shared/schema.ts";
+import { ensureDbPresent } from "./shared/ensure-db.ts";
+
+await ensureDbPresent();
 
 const db = new Database(DB_PATH);
 db.run("PRAGMA journal_mode = WAL");

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ApiStatus } from '../../types';
-import styles from '../css modules/ApiStatusBadge.module.css';
+import styles from './ApiStatusBadge.module.css';
 
 interface Props {
   status: ApiStatus;

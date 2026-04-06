@@ -3,6 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "download-db": "bun run scripts/download-db.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

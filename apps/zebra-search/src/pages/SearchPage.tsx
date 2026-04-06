@@ -6,7 +6,7 @@ import { FilterStrip } from '../components/layout/FilterStrip';
 import { ResultCard } from '../components/search/ResultCard';
 import { SearchSidebar } from '../components/search/SearchSidebar';
 import { LoadingState, ErrorState, EmptyState } from '../components/search/SearchStates';
-import styles from '../css modules/SearchPage.module.css';
+import styles from '../components/css modules/SearchPage.module.css';
 
 interface Props {
   initialQuery: string;
