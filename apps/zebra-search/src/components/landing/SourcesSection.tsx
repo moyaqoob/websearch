@@ -1,6 +1,6 @@
 import React from 'react';
 import { CURATED_SOURCES } from '../../lib/constants';
-import styles from './SourcesSection.module.css';
+import styles from '../css modules/SourcesSection.module.css';
 
 export function SourcesSection() {
   return (

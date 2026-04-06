@@ -114,7 +114,7 @@ export class Indexer {
     const startTime = Date.now();
     const errors: IndexingError[] = [];
     let processed = 0, indexed = 0, skipped = 0, offset = 0;
-  
+
     // get total count upfront so we can show progress
     const total = (this.db.prepare(`
       SELECT COUNT(*) as count
@@ -124,30 +124,29 @@ export class Indexer {
         AND a.content IS NOT NULL
         AND LENGTH(a.content) > 50
     `).get() as { count: number }).count;
-  
+
     if (total === 0) {
       console.log('[Indexer] No unindexed articles found.');
       return { articles_processed: 0, articles_indexed: 0, articles_skipped: 0, errors: [], duration_ms: 0 };
     }
-  
+
     console.log(`\n[Indexer] Starting — ${total.toLocaleString()} articles to process\n`);
-  
+
     while (true) {
       const articles = this.stmts.getUnindexedArticles.all({
         $limit: batchSize,
         $offset: offset,
       }) as IndexedArticle[];
-  
+
       if (articles.length === 0) break;
-  
+
       const batchNum = Math.floor(offset / batchSize) + 1;
       const totalBatches = Math.ceil(total / batchSize);
       console.log(`[Batch ${batchNum}/${totalBatches}] Processing ${articles.length} articles...`);
-  
+
       for (const article of articles) {
         try {
           const result = this.indexArticle(article);
-  
           if (result === 'indexed') {
             indexed++;
             console.log(`  ✓ [${indexed + skipped}/${total}] ${article.url}`);
@@ -155,28 +154,26 @@ export class Indexer {
             skipped++;
             console.log(`  ○ [${indexed + skipped}/${total}] SKIPPED — ${article.url}`);
           }
-  
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           errors.push({ article_id: article.id, url: article.url, error: message });
           console.log(`  ✗ [${processed + 1}/${total}] ERROR — ${article.url}`);
           console.log(`      ${message}`);
         }
-  
         processed++;
       }
-  
+      
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const rate = (processed / Number(elapsed)).toFixed(0);
       console.log(`\n[Batch ${batchNum}/${totalBatches}] Done — ${indexed} indexed, ${skipped} skipped, ${errors.length} errors | ${rate} articles/sec | ${elapsed}s elapsed\n`);
-  
+
       offset += batchSize;
     }
-  
+
     this.stmts.updateCorpusStats.run();
-  
+
     const duration_ms = Date.now() - startTime;
-  
+
     console.log('─'.repeat(60));
     console.log(`[Indexer] Complete`);
     console.log(`  Total processed : ${processed.toLocaleString()}`);
@@ -186,12 +183,12 @@ export class Indexer {
     console.log(`  Duration        : ${(duration_ms / 1000).toFixed(2)}s`);
     console.log(`  Avg speed       : ${(processed / (duration_ms / 1000)).toFixed(0)} articles/sec`);
     console.log('─'.repeat(60));
-  
+
     if (errors.length > 0) {
       console.log('\n[Indexer] Failed articles:');
       errors.forEach(e => console.log(`  ✗ ${e.url}\n    ${e.error}`));
     }
-  
+
     return { articles_processed: processed, articles_indexed: indexed, articles_skipped: skipped, errors, duration_ms };
   }
 

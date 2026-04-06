@@ -1,6 +1,6 @@
 import React from 'react';
 import { FilterTab, FILTER_TABS } from '../../lib/constants';
-import styles from './FilterStrip.module.css';
+import styles from '../css modules/FilterStrip.module.css';
 
 // re-export so consumers can import from here
 export type { FilterTab };

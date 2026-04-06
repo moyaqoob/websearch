@@ -1,6 +1,6 @@
 import React from 'react';
 import { STATS } from '../../lib/constants';
-import styles from './StatsBar.module.css';
+import styles from '../css modules/StatsBar.module.css';
 
 export function StatsBar() {
   return (

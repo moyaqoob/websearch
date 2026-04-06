@@ -64,7 +64,6 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.listen(PORT, () => {
   console.log(`[API] Listening on http://localhost:${PORT}`)
-  console.log(`[API] Try: http://localhost:${PORT}/search?q=LRU+cache`)
 });
 
 function clamp(n: number, min: number, max: number): number {

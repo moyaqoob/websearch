@@ -1,6 +1,6 @@
 import React from 'react';
 import { FEATURES } from '../../lib/constants';
-import styles from './FeaturesGrid.module.css';
+import styles from '../css modules/FeaturesGrid.module.css';
 
 export function FeaturesGrid() {
   return (

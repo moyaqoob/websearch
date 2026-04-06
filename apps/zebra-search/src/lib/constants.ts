@@ -12,6 +12,8 @@ export const FILTER_TABS = [
   'Problems',
 ] as const;
 
+export type FilterTab = (typeof FILTER_TABS)[number];
+
 export const SEARCH_HINTS = [
   'LRU cache',
   'consistent hashing',

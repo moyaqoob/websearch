@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ApiStatus } from '../../types';
 import { SearchIcon } from '../ui/SearchIcon';
 import { ApiStatusBadge } from '../ui/ApiStatusBadge';
-import styles from './TopBar.module.css';
+import styles from '../css modules/TopBar.module.css';
 
 interface Props {
   query: string;

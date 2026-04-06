@@ -2,7 +2,7 @@ import React from 'react';
 import { SearchResult } from '../../types';
 import { getDomain, getUrlPath, getFavLetter, normalizeScore } from '../../lib/utils';
 import { Highlight } from '../ui/Highlight';
-import styles from './ResultCard.module.css';
+import styles from '../css modules/ResultCard.module.css';
 
 interface Props {
   result: SearchResult;

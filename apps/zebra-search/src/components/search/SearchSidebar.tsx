@@ -3,7 +3,7 @@ import { SourceFilter, ApiStatus } from '../../types';
 import { API_BASE } from '../../lib/constants';
 import { getRelatedQueries } from '../../lib/utils';
 import { ApiStatusBadge } from '../ui/ApiStatusBadge';
-import styles from './SearchSidebar.module.css';
+import styles from '../css modules/SearchSidebar.module.css';
 
 interface Props {
   query: string;
