@@ -20,9 +20,19 @@ console.log(`[API] Index health:`, queryEngine.healthCheck());
 
 const app = express();
 
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 app.get('/search', (req: Request, res: Response) => {
   const q = (req.query.q as string)?.trim();
-
+  console.log("query",q)
   if (!q) {
     res.status(400).json({ error: 'Missing query parameter: q' });
     return;

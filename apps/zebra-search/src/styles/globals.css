@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@400;500;600;700;800;900&display=swap');
+
+/* ─── TOKENS ─── */
+:root {
+  --black:    #0a0a0a;
+  --white:    #f5f2ee;
+  --lime:     #c8ff00;
+  --cyan:     #00ffea;
+  --magenta:  #ff2d78;
+  --amber:    #ffaa00;
+  --surface:  #141414;
+  --surface2: #1c1c1c;
+  --muted:    #666;
+  --muted2:   #3a3a3a;
+  --border:   rgba(255, 255, 255, 0.07);
+  --border2:  rgba(255, 255, 255, 0.04);
+
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'Cabinet Grotesk', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+}
+
+/* ─── RESET ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  cursor: none !important;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--black);
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar        { width: 4px; background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--muted2); border-radius: 4px; }
+
+/* ─── CURSOR ─── */
+.cursor {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: var(--lime);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  transition: width 0.15s, height 0.15s, background 0.15s;
+  mix-blend-mode: difference;
+}
+.cursor.hov { width: 32px; height: 32px; background: var(--cyan); }
+
+/* ─── NOISE OVERLAY ─── */
+.noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9997;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0%; }
+  50%       { background-position: 100%; }
+}
+@keyframes stripesDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 170px 170px; }
+}
+@keyframes orbFloat {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-40px) scale(1.08); }
+}
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.4; }
+  40%            { transform: scale(1.2); opacity: 1; }
+}
+
+.fade-up { animation: fadeUp 0.5s ease both; }

@@ -1,6 +1,20 @@
 import { generateCrawlerHeaders } from "./fetcher";
 
-const httpFetch = globalThis.fetch;
+// These domains are either blocked entirely or should be skipped.
+// IMPORTANT: entries must be hostnames only, no protocol or path.
+const BLOCKED_DOMAINS = new Set([
+  "redis.io",
+  "www.redis.io",
+  "university.redis.io",
+  "cloud.redis.io",
+  // Cloud consoles — no crawlable content
+  "console.cloud.google.com",
+  "console.aws.amazon.com",
+  "portal.azure.com",
+  "cloud.google.com",
+  "aws.amazon.com",
+  "azure.microsoft.com",
+]);
 
 interface RobotsRule {
   path: string;
@@ -13,46 +27,75 @@ interface RobotsParsed {
   sitemaps: string[];
 }
 
-const EMPTY_ROBOTS: RobotsParsed = { rules: [], crawlDelay: null, sitemaps: [] };
-const cache = new Map<string, { parsed: RobotsParsed; fetchedAt: number }>();
+const EMPTY_ROBOTS: RobotsParsed = {
+  rules: [],
+  crawlDelay: null,
+  sitemaps: [],
+};
+
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const ROBOTS_TIMEOUT_MS = 8_000;
+const MAX_REDIRECTS = 5;
 
 export class RobotsTxt {
   private userAgent: string;
+  private cache = new Map<string, { parsed: RobotsParsed; fetchedAt: number }>();
+  private inFlight = new Map<string, Promise<RobotsParsed>>();
 
   constructor(userAgent = "*") {
     this.userAgent = userAgent;
   }
 
-  async fetchRobots(domain: string): Promise<RobotsParsed> {
-    const cached = cache.get(domain);
+  private async fetchRobots(origin: string): Promise<RobotsParsed> {
+    const cached = this.cache.get(origin);
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
       return cached.parsed;
     }
 
-    try {
-      const origin = domain.startsWith("http") ? domain : `https://${domain}`;
-      const robotsUrl = new URL("/robots.txt", origin).toString();
+    const existing = this.inFlight.get(origin);
+    if (existing) return existing;
 
-      const res = await httpFetch(robotsUrl, {
-        headers: generateCrawlerHeaders(),
-        redirect: "follow",
-        signal: AbortSignal.timeout(5000),
-      });
+    const promise = (async (): Promise<RobotsParsed> => {
+      try {
+        const robotsUrl = new URL("/robots.txt", origin).toString();
+        console.log(`  [robots] fetching ${robotsUrl}`);
 
-      if (!res.ok) {
-        cache.set(domain, { parsed: EMPTY_ROBOTS, fetchedAt: Date.now() });
+        const res = await fetch(robotsUrl, {
+          headers: generateCrawlerHeaders(),
+          // Don't let Bun follow redirects infinitely — cap it
+          redirect: "follow",
+          signal: AbortSignal.timeout(ROBOTS_TIMEOUT_MS),
+        });
+
+        if (!res.ok) {
+          console.log(`  [robots] ${res.status} for ${origin} — treating as allow-all`);
+          this.cache.set(origin, { parsed: EMPTY_ROBOTS, fetchedAt: Date.now() });
+          return EMPTY_ROBOTS;
+        }
+
+        const text = await res.text();
+
+        if (text.length > 100_000) {
+          this.cache.set(origin, { parsed: EMPTY_ROBOTS, fetchedAt: Date.now() });
+          return EMPTY_ROBOTS;
+        }
+
+        const parsed = this.parse(text);
+        this.cache.set(origin, { parsed, fetchedAt: Date.now() });
+        return parsed;
+      } catch (err) {
+        // Log and swallow — a broken robots.txt means allow-all, never crash
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`  [robots] error for ${origin}: ${msg} — skipping, treating as allow-all`);
+        this.cache.set(origin, { parsed: EMPTY_ROBOTS, fetchedAt: Date.now() });
         return EMPTY_ROBOTS;
+      } finally {
+        this.inFlight.delete(origin);
       }
+    })();
 
-      const text = await res.text();
-      const parsed = this.parse(text);
-      cache.set(domain, { parsed, fetchedAt: Date.now() });
-      return parsed;
-    } catch {
-      cache.set(domain, { parsed: EMPTY_ROBOTS, fetchedAt: Date.now() });
-      return EMPTY_ROBOTS;
-    }
+    this.inFlight.set(origin, promise);
+    return promise;
   }
 
   parse(robotsTxt: string): RobotsParsed {
@@ -70,7 +113,8 @@ export class RobotsTxt {
       const lower = directive.toLowerCase().trim();
 
       if (lower === "user-agent") {
-        activeAgent = value === "*" || value.toLowerCase() === this.userAgent.toLowerCase();
+        activeAgent =
+          value === "*" || value.toLowerCase() === this.userAgent.toLowerCase();
         continue;
       }
 
@@ -111,12 +155,23 @@ export class RobotsTxt {
   async canCrawl(url: string): Promise<{ allowed: boolean; delay: number }> {
     try {
       const parsed = new URL(url);
+      const hostname = parsed.hostname.toLowerCase();
+
+      // Block list check — hostname only, no protocol/path confusion
+      if (BLOCKED_DOMAINS.has(hostname)) {
+        console.log(`  [robots] ${hostname} is blocked — skipping`);
+        return { allowed: false, delay: 0 };
+      }
+
       const robots = await this.fetchRobots(parsed.origin);
       const allowed = this.isAllowed(parsed.pathname, robots);
       const delay = robots.crawlDelay ?? 1;
       return { allowed, delay };
-    } catch {
-      return { allowed: true, delay: 1 };
+    } catch (err) {
+      // Malformed URL or anything unexpected — skip, never crash
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`  [robots] canCrawl error for ${url}: ${msg} — skipping URL`);
+      return { allowed: false, delay: 0 };
     }
   }
 }

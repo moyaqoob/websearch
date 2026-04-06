@@ -32,10 +32,9 @@ export class Initialize {
       maxConcurrentCrawls: 8,
       crawlDelayMs: 300,
       requestTimeoutMs: 12_000,
-      maxPagesPerDomain: 1000,
-      minContentLength: 150,
+      maxPagesPerDomain: 100_000,
+      minContentLength: 500,
     };
-
     this.createTables();
     this.bootstrapSeenUrls();
     this.initializeSeedUrls(seedUrls);
@@ -140,34 +139,45 @@ export class Initialize {
       VALUES (?, ?)
     `);
 
+    let added = 0;
+    let skippedDuplicate = 0;
+    let skippedInvalid = 0;
+
     const insertMany = this.db.transaction((nextUrls: string[]) => {
       for (const rawUrl of nextUrls) {
         try {
           const normalizedUrl = normalizeQueueUrl(rawUrl);
           const parsed = new URL(normalizedUrl);
 
-          if (
-            shouldDiscardUrl(normalizedUrl) ||
-            !isLikelyArticleUrl(normalizedUrl, parsed.hostname)
-          ) {
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            skippedInvalid++;
             continue;
           }
 
           if (this.seenUrls.has(normalizedUrl)) {
+            skippedDuplicate++;
             continue;
           }
 
           const result = stmt.run(normalizedUrl, parsed.hostname);
           if (result.changes > 0) {
             this.seenUrls.add(normalizedUrl);
+            added++;
+          } else {
+            skippedDuplicate++;
           }
         } catch {
+          skippedInvalid++;
           continue;
         }
       }
     });
 
     insertMany(urls);
+
+    if (added > 0) {
+      console.log(`   Seeds: +${added} new, ${skippedDuplicate} existing, ${skippedInvalid} invalid`);
+    }
   }
 
   getNextSeedUrl(): string | null {
@@ -195,33 +205,19 @@ export class Initialize {
   }
 
   getNextDiscoveredUrls(limit: number): string[] {
-    const reserveBatch = this.db.transaction((batchLimit: number) => {
-      const rows = this.db
-        .prepare(
-          `
-          SELECT url
-          FROM url_queue
-          WHERE crawled = 0
-          ORDER BY priority DESC, rowid ASC
-          LIMIT ?
-        `,
-        )
-        .all(batchLimit) as Array<{ url: string }>;
+    // Just SELECT, don't mark yet
+    const rows = this.db
+      .prepare(
+        `
+      SELECT url FROM url_queue
+      WHERE crawled = 0
+      ORDER BY priority DESC, rowid ASC
+      LIMIT ?
+    `,
+      )
+      .all(limit) as Array<{ url: string }>;
 
-      const markStmt = this.db.prepare(`
-        UPDATE url_queue
-        SET crawled = 1, crawled_at = CURRENT_TIMESTAMP
-        WHERE url = ?
-      `);
-
-      for (const row of rows) {
-        markStmt.run(row.url);
-      }
-
-      return rows.map((row) => row.url);
-    });
-
-    return reserveBatch(limit);
+    return rows.map((row) => row.url);
   }
 
   markSeedAsCrawled(url: string, articlesFound: number = 0): void {
@@ -241,7 +237,9 @@ export class Initialize {
       return { inserted: 0, duplicates: 0, invalid: 0, discarded: 0 };
     }
 
-    console.log(`  addDiscoveredUrls: received ${urls.length} URLs from ${sourceDomain}, seenUrls size: ${this.seenUrls.size}`);
+    console.log(
+      `addDiscoveredUrls: received ${urls.length} URLs from ${sourceDomain}, seenUrls size: ${this.seenUrls.size}`,
+    );
 
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO url_queue (url, domain, source, crawled)
@@ -288,10 +286,23 @@ export class Initialize {
 
     insertMany(urls);
 
-    const queueCount = (this.db.prepare("SELECT COUNT(*) as count FROM url_queue").get() as { count: number }).count;
-    console.log(`  addDiscoveredUrls result: +${stats.inserted} inserted, ${stats.duplicates} dups, ${stats.discarded} discarded, ${stats.invalid} invalid | url_queue total: ${queueCount}`);
+    const queueCount = (
+      this.db.prepare("SELECT COUNT(*) as count FROM url_queue").get() as {
+        count: number;
+      }
+    ).count;
+    console.log(
+      `  addDiscoveredUrls result: +${stats.inserted} inserted, ${stats.duplicates} dups, ${stats.discarded} discarded, ${stats.invalid} invalid | url_queue total: ${queueCount}`,
+    );
 
     return stats;
+  }
+
+  markDiscoveredAsCrawled(url: string): void {
+    this.db.prepare(`
+      UPDATE url_queue SET crawled = 1, crawled_at = CURRENT_TIMESTAMP
+      WHERE url = ?
+    `).run(url);
   }
 
   updateSeedStats(seedUrl: string, linksDiscovered: number): void {

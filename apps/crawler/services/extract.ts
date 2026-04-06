@@ -78,7 +78,7 @@ export class Extract {
           return date.toISOString().split("T")[0];
         }
       } catch {
-        // Invalid date format, skip
+        return dateStr
       }
     }
     return null;
@@ -410,10 +410,8 @@ export class Extract {
       }
     });
 
-    const unique = [...new Set(links)];
-    console.log(
-      `  Links: ${rawCount} raw → ${normalizedCount} normalized → ${filteredCount} passed filter → ${unique.length} unique`
-    );
+    const unique = [...new Set(links)]
+    console.log(`Links: ${rawCount} raw → ${normalizedCount} normalized → ${filteredCount} passed filter → ${unique.length} unique`)
     return unique;
   }
 }

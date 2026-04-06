@@ -29,8 +29,6 @@ export const DISCARD_URL_PATTERNS: RegExp[] = [
   /[?&]source=topic_portal/,
   /\/category\//,
   /\/categories\//,
-  /\/blog\/?$/,
-  /\/articles\/?$/,
   /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|pdf|zip)$/i,
   /^https?:\/\/[^/]+\/\d+\/?$/,
 ];
@@ -200,7 +198,6 @@ export function shouldDiscardUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return true;
-    if (parsed.pathname === "/" || parsed.pathname === "") return true;
     if (!parsed.hostname.includes(".")) return true;
     return DISCARD_URL_PATTERNS.some((pattern) => pattern.test(url));
   } catch {
@@ -228,6 +225,7 @@ export function isLikelyArticleUrl(url: string, sourceDomain: string): boolean {
   const hostname = normalizeHostname(parsed.hostname);
   const normalizedSource = normalizeHostname(sourceDomain);
   const pathAndQuery = parsed.pathname + parsed.search;
+  const isRootPath = parsed.pathname === "/" || parsed.pathname === "";
 
   // Medium is a platform — apply article shape detection
   if (hostname.includes("medium.com") && !isMediumArticleUrl(url)) {
@@ -244,18 +242,22 @@ export function isLikelyArticleUrl(url: string, sourceDomain: string): boolean {
     return false;
   }
 
-  // CANONICAL + INSTITUTIONAL: trust the source, don't require signal matching
-  // Netflix engineering posts don't have /algorithms/ in the URL
+  // CANONICAL + INSTITUTIONAL: trust the source, accept root paths too
+  // e.g. https://netflixtechblog.com is itself a listing of articles
   if (isHighAuthorityDomain(hostname)) {
     return true;
   }
 
-  // ESTABLISHED authors: same — trust the domain
+  // ESTABLISHED authors: same — trust the domain including root
   if (isEstablishedDomain(hostname)) {
     return true;
   }
 
+  // For COMMUNITY/UNKNOWN: reject bare root paths — no signal to judge
+  if (isRootPath) {
+    return false;
+  }
+
   // COMMUNITY + UNKNOWN: require URL to signal relevance before queueing
-  // This is your last line of defense against off-topic content
   return DSA_URL_SIGNALS.some((signal) => signal.test(pathAndQuery));
 }

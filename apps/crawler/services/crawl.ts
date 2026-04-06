@@ -12,7 +12,7 @@ export const CRAWL_CONFIG = {
     requestDelayMs: 300,
     fetchTimeoutMs: 12_000,
     maxRetries: 1,
-    batchSize: 50,
+    batchSize: 5000,
   };
   
  export  type CrawlResult = "stored" | "skipped" | "failed";
@@ -52,12 +52,16 @@ export  async function crawlWithConcurrency(
       while (queue.length > 0) {
         const nextUrl = queue.shift();
         if (nextUrl) {
-          await crawlOne(nextUrl);
+          try {
+            await crawlOne(nextUrl);
+          } catch (err) {
+            console.log(`  Worker error on ${nextUrl}: ${err instanceof Error ? err.message : err}`);
+          }
         }
       }
     });
   
-    await Promise.all(workers);
+    await Promise.allSettled(workers);
   }
   
  export  async function fetchWithRetry(

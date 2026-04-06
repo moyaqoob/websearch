@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 // Path to the crawler database file (relative to process cwd by default)
-const DB_PATH = process.env.CRAWLER_DB_PATH ?? "crawler.db";
+const DB_PATH = process.env.CRAWLER_DB_PATH;
 
 export const db = new Database(DB_PATH);
 

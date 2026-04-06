@@ -6,10 +6,6 @@ import { Normalize } from "./services/normalize";
 import { RobotsTxt } from "./services/robotsTxt";
 import { Store } from "./services/store";
 import { Validate } from "./services/Validate";
-
-
-
-
 import { type CrawlStats, type CrawlResult, CRAWL_CONFIG, DomainRateLimiter, crawlWithConcurrency, crawlUrl } from "./services/crawl";
 
 function recordResult(stats: CrawlStats, result: CrawlResult): void {
@@ -90,6 +86,7 @@ async function main() {
     await crawlWithConcurrency(
       discoveredBatch,
       async (discoveredUrl) => {
+        init.markDiscoveredAsCrawled(discoveredUrl);
         console.log(`\n[Discovered] ${discoveredUrl}`);
         const result = await crawlUrl(
           discoveredUrl,
@@ -103,7 +100,6 @@ async function main() {
           store,
           rateLimiter,
         );
-
         recordResult(stats, result);
       },
       CRAWL_CONFIG.concurrency,

@@ -23,8 +23,8 @@ export class Fetcher {
       });
 
       if (!response?.ok) {
-        console.error(
-          `Fetch failed: HTTP ${response?.status} ${response?.statusText}`,
+        console.log(
+          `  Fetch ${response?.status}: ${response?.statusText} — ${url}`,
         );
         return null;
       }
@@ -36,14 +36,14 @@ export class Fetcher {
         !contentType.includes("text/plain") &&
         !contentType.includes("application/xhtml")
       ) {
-        console.error(`Fetch skipped: non-html content (${contentType})`);
+        console.log(`  Fetch skipped: non-html content (${contentType}) — ${url}`);
         return null;
       }
 
       const contentLength = Number(response.headers.get("content-length") ?? 0);
 
       if (contentLength > MAX_RESPONSE_BYTES) {
-        console.error(`Fetch skipped: response too large (${contentLength})`);
+        console.log(`  Fetch skipped: response too large (${contentLength}) — ${url}`);
         return null;
       }
 
@@ -54,10 +54,10 @@ export class Fetcher {
     } catch (err) {
       const name = err instanceof DOMException ? err.name : "";
       if (name === "TimeoutError" || name === "AbortError") {
-        console.error(`Fetch timeout: ${url}`);
+        console.log(`  Fetch timeout: ${url}`);
       } else {
-        console.error(
-          `Fetch error: ${err instanceof Error ? err.message : String(err)}`,
+        console.log(
+          `  Fetch error: ${err instanceof Error ? err.message : String(err)} — ${url}`,
         );
       }
 

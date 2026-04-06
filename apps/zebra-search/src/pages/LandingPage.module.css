@@ -1,0 +1,152 @@
+.page {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* zebra stripes */
+.stripes {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -35deg,
+    transparent,
+    transparent 60px,
+    rgba(255, 255, 255, 0.012) 60px,
+    rgba(255, 255, 255, 0.012) 120px
+  );
+  animation: stripesDrift 40s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* gradient orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 1;
+}
+.orb1 {
+  width: 500px; height: 500px;
+  background: var(--lime);
+  opacity: 0.18;
+  top: -120px; right: -80px;
+  animation: orbFloat 14s ease-in-out infinite alternate;
+}
+.orb2 {
+  width: 380px; height: 380px;
+  background: var(--cyan);
+  opacity: 0.16;
+  bottom: -60px; left: -80px;
+  animation: orbFloat 12s 4s ease-in-out infinite alternate;
+}
+.orb3 {
+  width: 260px; height: 260px;
+  background: var(--magenta);
+  opacity: 0.1;
+  top: 45%; left: 52%;
+  animation: orbFloat 10s 8s ease-in-out infinite alternate;
+}
+
+/* CTA */
+.cta {
+  padding: 120px 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+.ctaGlow {
+  position: absolute;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(200,255,0,0.08), transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.ctaInner { position: relative; z-index: 1; }
+
+.ctaTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.2rem, 5vw, 4.5rem);
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  margin-bottom: 20px;
+}
+
+.ctaDesc {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-bottom: 40px;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+
+.ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--lime);
+  color: var(--black);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 14px 28px;
+  border-radius: 100px;
+  border: none;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.ctaBtn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 48px rgba(200, 255, 0, 0.4);
+}
+
+.ctaArrow {
+  width: 20px; height: 20px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* footer */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.22);
+  font-family: var(--font-mono);
+  position: relative;
+  z-index: 2;
+}
+
+.footerMuted { color: rgba(255, 255, 255, 0.14); }
+
+.footerLinks {
+  display: flex;
+  gap: 20px;
+}
+.footerLinks button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  transition: color 0.2s;
+  padding: 0;
+}
+.footerLinks button:hover { color: var(--white); }

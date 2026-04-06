@@ -1,0 +1,42 @@
+.bar {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 56px;
+  background: rgba(255, 255, 255, 0.02);
+  position: relative;
+  z-index: 2;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--white), var(--muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+}
+
+.sep {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+}

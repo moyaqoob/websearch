@@ -11,10 +11,10 @@ export class Store {
       const articleStmt = this.db.prepare(`
         INSERT INTO articles (
           id, url, url_normalized, domain, title, content,
-          content_hash, crawl_timestamp
+          content_hash, crawl_timestamp,
         ) VALUES (
           $id, $url, $url_normalized, $domain, $title, $content,
-          $content_hash, $crawl_timestamp
+          $content_hash, $crawl_timestamp,
         )
       `);
 
@@ -46,6 +46,7 @@ export class Store {
           $content: article.content,
           $content_hash: article.content_hash,
           $crawl_timestamp: article.crawl_timestamp,
+          $published_date:article.published_date
         });
 
         signalStmt.run({

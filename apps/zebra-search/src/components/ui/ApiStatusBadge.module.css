@@ -1,0 +1,26 @@
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+.live  { color: var(--lime);    border-color: rgba(200,255,0,.25);  background: rgba(200,255,0,.06);  }
+.dead  { color: var(--magenta); border-color: rgba(255,45,120,.25); background: rgba(255,45,120,.06); }
+.loading { color: var(--amber); border-color: rgba(255,170,0,.25);  background: rgba(255,170,0,.06);  }
+
+.live    .dot { background: var(--lime); }
+.dead    .dot { background: var(--magenta); animation: none; }
+.loading .dot { background: var(--amber); }
