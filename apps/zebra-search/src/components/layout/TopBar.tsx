@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
-import { ApiStatus } from '../../types';
-import { SearchIcon } from '../ui/SearchIcon';
-import { ApiStatusBadge } from '../ui/ApiStatusBadge';
-import styles from '../css modules/TopBar.module.css';
+import React, { useRef } from "react";
+import { ApiStatus } from "../../types";
+import { SearchIcon } from "../ui/SearchIcon";
+import { ApiStatusBadge } from "../ui/ApiStatusBadge";
+import styles from "../css-modules/TopBar.module.css";
 
 interface Props {
   query: string;
@@ -13,12 +13,19 @@ interface Props {
   onHome: () => void;
 }
 
-export function TopBar({ query, total, searchTime, apiStatus, onSearch, onHome }: Props) {
+export function TopBar({
+  query,
+  total,
+  searchTime,
+  apiStatus,
+  onSearch,
+  onHome,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const submit = () => {
     const val = inputRef.current?.value.trim();
-    console.log("val",val)
+    console.log("val", val);
     if (val) onSearch(val);
   };
 
@@ -35,7 +42,7 @@ export function TopBar({ query, total, searchTime, apiStatus, onSearch, onHome }
           className={styles.input}
           defaultValue={query}
           placeholder="Search..."
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
         />
         <button className={styles.btn} onClick={submit}>
           <SearchIcon size={12} />
@@ -47,7 +54,9 @@ export function TopBar({ query, total, searchTime, apiStatus, onSearch, onHome }
       <div className={styles.meta}>
         {searchTime && (
           <>
-            <span><strong>{total.toLocaleString()}</strong> results</span>
+            <span>
+              <strong>{total.toLocaleString()}</strong> results
+            </span>
             <span>{searchTime}s</span>
           </>
         )}

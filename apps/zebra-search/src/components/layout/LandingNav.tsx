@@ -1,5 +1,5 @@
-import React from 'react';
-import styles from '../css modules/LandingNav.module.css';
+import React from "react";
+import styles from "../css-modules/LandingNav.module.css";
 
 interface Props {
   onTrySearch: () => void;
@@ -16,7 +16,10 @@ export function LandingNav({ onTrySearch }: Props) {
         <button className={styles.link}>About</button>
         <button className={styles.link}>Sources</button>
         <button className={styles.link}>Blog</button>
-        <button className={`${styles.link} ${styles.cta}`} onClick={onTrySearch}>
+        <button
+          className={`${styles.link} ${styles.cta}`}
+          onClick={onTrySearch}
+        >
           Try Search →
         </button>
       </div>

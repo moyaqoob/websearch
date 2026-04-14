@@ -3,7 +3,7 @@ import { HeroSection } from '../components/landing/HeroSection';
 import { StatsBar } from '../components/landing/StatsBar';
 import { FeaturesGrid } from '../components/landing/FeaturesGrid';
 import { SourcesSection } from '../components/landing/SourcesSection';
-import styles from '../css modules/LandingPage.module.css';
+import styles from '../components/css-modules/LandingPage.module.css';
 
 interface Props {
   onSearch: (query: string) => void;

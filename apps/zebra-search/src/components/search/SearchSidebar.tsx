@@ -1,9 +1,9 @@
-import React from 'react';
-import { SourceFilter, ApiStatus } from '../../types';
-import { API_BASE } from '../../lib/constants';
-import { getRelatedQueries } from '../../lib/utils';
-import { ApiStatusBadge } from '../ui/ApiStatusBadge';
-import styles from '../css modules/SearchSidebar.module.css';
+import React from "react";
+import { SourceFilter, ApiStatus } from "../../types";
+import { API_BASE } from "../../lib/constants";
+import { getRelatedQueries } from "../../lib/utils";
+import { ApiStatusBadge } from "../ui/ApiStatusBadge";
+import styles from "../css-modules/SearchSidebar.module.css";
 
 interface Props {
   query: string;
@@ -25,7 +25,10 @@ export function SearchSidebar({
   return (
     <aside className={styles.sidebar}>
       {/* Related searches */}
-      <section className={`${styles.section} fade-up`} style={{ animationDelay: '0.1s' }}>
+      <section
+        className={`${styles.section} fade-up`}
+        style={{ animationDelay: "0.1s" }}
+      >
         <h4 className={styles.sectionTitle}>Related</h4>
         <div className={styles.relatedList}>
           {related.map((r) => (
@@ -42,16 +45,19 @@ export function SearchSidebar({
 
       {/* Source filters — only shown when there are results */}
       {sources.length > 0 && (
-        <section className={`${styles.section} fade-up`} style={{ animationDelay: '0.18s' }}>
+        <section
+          className={`${styles.section} fade-up`}
+          style={{ animationDelay: "0.18s" }}
+        >
           <h4 className={styles.sectionTitle}>Sources in results</h4>
           <div className={styles.sourceList}>
             {sources.map((s, i) => (
               <button
                 key={s.name}
-                className={`${styles.sourceItem} sf-item ${s.enabled ? styles.checked : ''}`}
+                className={`${styles.sourceItem} sf-item ${s.enabled ? styles.checked : ""}`}
                 onClick={() => onSourceToggle(i)}
               >
-                <div className={styles.checkbox}>{s.enabled ? '✓' : ''}</div>
+                <div className={styles.checkbox}>{s.enabled ? "✓" : ""}</div>
                 <span className={styles.sourceName}>{s.name}</span>
                 <span className={styles.sourceCount}>{s.count}</span>
               </button>
@@ -61,7 +67,10 @@ export function SearchSidebar({
       )}
 
       {/* API info */}
-      <section className={`${styles.section} fade-up`} style={{ animationDelay: '0.26s' }}>
+      <section
+        className={`${styles.section} fade-up`}
+        style={{ animationDelay: "0.26s" }}
+      >
         <h4 className={styles.sectionTitle}>API</h4>
         <div className={styles.apiCard}>
           <div className={styles.apiRow}>

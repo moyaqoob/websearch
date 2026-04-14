@@ -1,7 +1,7 @@
-import React from 'react';
-import { ApiStatus } from '../../types';
-import { API_BASE } from '../../lib/constants';
-import styles from '../css modules/SearchStates.module.css';
+import React from "react";
+import { ApiStatus } from "../../types";
+import { API_BASE } from "../../lib/constants";
+import styles from "../css-modules/SearchStates.module.css";
 
 export function LoadingState() {
   return (
@@ -22,12 +22,12 @@ interface ErrorProps {
 }
 
 export function ErrorState({ query, apiStatus }: ErrorProps) {
-  const isOffline = apiStatus === 'dead';
+  const isOffline = apiStatus === "dead";
   return (
     <div className={styles.container}>
-      <div className={styles.icon}>{isOffline ? '🔌' : '⚠️'}</div>
-      <h3 className={styles.title} style={{ color: 'var(--magenta)' }}>
-        {isOffline ? 'API offline' : 'Search failed'}
+      <div className={styles.icon}>{isOffline ? "🔌" : "⚠️"}</div>
+      <h3 className={styles.title} style={{ color: "var(--magenta)" }}>
+        {isOffline ? "API offline" : "Search failed"}
       </h3>
       <p className={styles.desc}>
         {isOffline
@@ -37,7 +37,7 @@ export function ErrorState({ query, apiStatus }: ErrorProps) {
       <code className={styles.hint}>
         {isOffline
           ? `$ bun run src/index.ts   # in apps/indexer`
-          : 'Check the indexer logs for details'}
+          : "Check the indexer logs for details"}
       </code>
     </div>
   );

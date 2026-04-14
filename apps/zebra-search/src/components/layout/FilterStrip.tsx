@@ -1,6 +1,6 @@
-import React from 'react';
-import { FilterTab, FILTER_TABS } from '../../lib/constants';
-import styles from '../css modules/FilterStrip.module.css';
+import React from "react";
+import { FilterTab, FILTER_TABS } from "../../lib/constants";
+import styles from "../css-modules/FilterStrip.module.css";
 
 // re-export so consumers can import from here
 export type { FilterTab };
@@ -17,7 +17,7 @@ export function FilterStrip({ active, onChange }: Props) {
         <React.Fragment key={tab}>
           {i === 5 && <div className={styles.sep} />}
           <button
-            className={`${styles.btn} ${active === tab ? styles.active : ''}`}
+            className={`${styles.btn} ${active === tab ? styles.active : ""}`}
             onClick={() => onChange(tab as FilterTab)}
           >
             {tab}
