@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "start": "bun run server.ts",
     "download-db": "bun run scripts/download-db.ts"
   },
   "devDependencies": {

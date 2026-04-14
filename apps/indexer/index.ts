@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import { DB_PATH } from "./types/config";
 
 // src/index.ts
@@ -10,8 +11,11 @@ await ensureDbPresent();
 
 const db = new Database(DB_PATH);
 db.run("PRAGMA journal_mode = WAL");
-db.run("PRAGMA temp_store = FILE"); // use file-based temp, not memory
-db.run('PRAGMA temp_store_directory = "E:\\\\temp"'); // point it at E: drive
+db.run("PRAGMA temp_store = FILE");
+if (process.platform === "win32") {
+  const dir = tmpdir().replace(/\\/g, "/");
+  db.run(`PRAGMA temp_store_directory = '${dir}'`);
+}
 db.run("PRAGMA cache_size = -65536");
 db.run("PRAGMA foreign_keys = ON");
 db.run(INDEX_SCHEMA_SQL);
