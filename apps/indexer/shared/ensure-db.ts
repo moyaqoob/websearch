@@ -7,7 +7,7 @@ import { DB_PATH } from "../types/config";
  * External DB source URL. Leave empty and set DB_DOWNLOAD_URL env var at runtime.
  * Supports any direct-download URL, including Google Drive direct links.
  */
-const DB_DOWNLOAD_URL = "";
+const DB_DOWNLOAD_URL = "https://drive.google.com/drive/u/1/folders/1Tv9SdlrYtDlYXbH1Nhqfg78YiACnAuiO";
 
 function resolveDownloadUrl() {
   const fromEnv = process.env.DB_DOWNLOAD_URL?.trim();
