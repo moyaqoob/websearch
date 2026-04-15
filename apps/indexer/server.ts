@@ -1,24 +1,12 @@
 import express, {type Request,type Response } from 'express';
-import Database from 'bun:sqlite';
-import { Indexer } from './indexer/indexer';
 import { QueryEngine } from './query/query-engine';
-import { INDEX_SCHEMA_SQL } from './shared/schema';
-import { DB_PATH } from './types/config';
-import { ensureDbPresent } from './shared/ensure-db';
+import { SearchEngine } from './search-engine';
+import 'dotenv/config';
 
-const PORT    = Number(process.env.PORT ?? 3000);
-
-await ensureDbPresent();
-const db = new Database(DB_PATH);
-db.run('PRAGMA journal_mode = WAL');
-db.run('PRAGMA cache_size = -65536');
-db.run('PRAGMA foreign_keys = ON');
-db.exec(INDEX_SCHEMA_SQL)
-
-const queryEngine = new QueryEngine(db);
-
-console.log(`[API] Connected to ${DB_PATH}`);
-console.log(`[API] Index health:`, queryEngine.healthCheck());
+const queryEngine = new QueryEngine();
+const searchEngine = new SearchEngine();
+const PORT = 3001;
+// console.log(`[API] Index health:`, await queryEngine.healthCheck());
 
 const app = express();
 
@@ -32,7 +20,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/search', (req: Request, res: Response) => {
+app.get('/search', async (req: Request, res: Response) => {
   const q = (req.query.q as string)?.trim();
   console.log("query",q)
   if (!q) {
@@ -44,7 +32,7 @@ app.get('/search', (req: Request, res: Response) => {
   const offset  = clamp(Number(req.query.offset ?? 0),  0, 1000);
   const explain = req.query.explain === 'true';
 
-  const results = queryEngine.search(q, { limit, offset, explain });
+  const results = await searchEngine.search(q, { limit, offset, explain });
 
   res.json({
     query:   q,
@@ -61,7 +49,7 @@ app.get('/search', (req: Request, res: Response) => {
 });
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json(queryEngine.healthCheck());
+  res.status(200).json({ ok: true });
 });
 
 app.listen(PORT, () => {

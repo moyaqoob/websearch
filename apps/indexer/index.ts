@@ -1,31 +1,20 @@
-import { tmpdir } from "node:os";
-import { DB_PATH } from "./types/config";
+import {Database} from 'bun:sqlite';
+import { D1Client } from './indexer/client.ts';
+import 'dotenv/config';
+import { Indexer } from './indexer/indexer.ts';
 
-// src/index.ts
-import { Database } from "bun:sqlite";
-import { Indexer } from "./indexer/indexer.ts";
-import { INDEX_SCHEMA_SQL } from "./shared/schema.ts";
-import { ensureDbPresent } from "./shared/ensure-db.ts";
+const LOCAL_DB_PATH = process.env.LOCAL_DB_PATH ?? './data/search-engine.db';
 
-await ensureDbPresent();
+const localDb = new Database(LOCAL_DB_PATH);
+localDb.exec('PRAGMA journal_mode = WAL');
+console.log('[Boot] Connecting to Cloudflare D1...');
+const d1 = new D1Client();
 
-const db = new Database(DB_PATH);
-db.run("PRAGMA journal_mode = WAL");
-db.run("PRAGMA temp_store = FILE");
-if (process.platform === "win32") {
-  const dir = tmpdir().replace(/\\/g, "/");
-  db.run(`PRAGMA temp_store_directory = '${dir}'`);
-}
-db.run("PRAGMA cache_size = -65536");
-db.run("PRAGMA foreign_keys = ON");
-db.run(INDEX_SCHEMA_SQL);
+const indexer = new Indexer(localDb, d1);
+const concurrency = Number(process.env.INDEXER_CONCURRENCY ?? '6');
 
-const indexer = new Indexer(db);
+console.log('[Boot] Starting indexing run...');
+const result = await indexer.indexAll({ batchSize: 47000, concurrency });
 
-console.log("[Indexer] Starting...");
-const result = await indexer.indexAll();
-console.log(
-  `[Indexer] Done. ${result.articles_indexed} indexed, ${result.errors.length} errors in ${result.duration_ms}ms`,
-);
-
-db.close();
+console.log('[Boot] Done.', result);
+localDb.close();
