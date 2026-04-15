@@ -28,12 +28,7 @@ export function LandingPage({ onSearch }: Props) {
       <section className={styles.cta}>
         <div className={styles.ctaGlow} />
         <div className={styles.ctaInner}>
-          <h2 className={styles.ctaTitle}>Start<br />searching.</h2>
-          <p className={styles.ctaDesc}>No account. No setup. Just type what you need and find it.</p>
-          <button className={styles.ctaBtn} onClick={() => onSearch('consistent hashing')}>
-            Open Search
-            <span className={styles.ctaArrow}>→</span>
-          </button>
+          <h2 className={styles.ctaTitle}>Start searching.</h2>
         </div>
       </section>
 

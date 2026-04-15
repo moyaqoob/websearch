@@ -1,4 +1,3 @@
-import React from "react";
 import styles from "../css-modules/LandingNav.module.css";
 
 interface Props {
@@ -10,15 +9,13 @@ export function LandingNav({ onTrySearch }: Props) {
     <nav className={styles.nav}>
       <div className={styles.logo}>
         <div className={styles.logoIcon}>🦓</div>
-        zebra
+        zebra search
       </div>
       <div className={styles.links}>
-        <button className={styles.link}>About</button>
-        <button className={styles.link}>Sources</button>
-        <button className={styles.link}>Blog</button>
         <button
           className={`${styles.link} ${styles.cta}`}
           onClick={onTrySearch}
+
         >
           Try Search →
         </button>

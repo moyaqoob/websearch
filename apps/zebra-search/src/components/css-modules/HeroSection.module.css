@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 80px 48px;
+  padding: 60px 48px;
   position: relative;
   z-index: 2;
   text-align: center;
@@ -31,7 +31,7 @@
   width: 6px;
   height: 6px;
   background: var(--lime);
-  border-radius: 50%;
+  border-radius: 40%;
   animation: pulse 2s ease infinite;
 }
 
@@ -61,10 +61,12 @@
 
 .sub {
   font-size: clamp(0.95rem, 1.8vw, 1.15rem);
-  color: var(--muted);
+  color: var(--cyan);
   max-width: 480px;
   margin: 0 auto 40px;
   line-height: 1.65;
+  font-style:italic;
+  opacity: 30%;
 }
 
 .searchWrap {

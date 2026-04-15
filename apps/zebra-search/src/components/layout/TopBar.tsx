@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { ApiStatus } from "../../types";
 import { SearchIcon } from "../ui/SearchIcon";
 import { ApiStatusBadge } from "../ui/ApiStatusBadge";
@@ -25,7 +25,6 @@ export function TopBar({
 
   const submit = () => {
     const val = inputRef.current?.value.trim();
-    console.log("val", val);
     if (val) onSearch(val);
   };
 

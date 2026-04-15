@@ -14,7 +14,7 @@ export class Indexer {
   private d1: D1Client;
 
   constructor(localDb: Database, d1: D1Client) {
-    this.localDb = localDb;
+    this.localDb = new Database("./data/search-engine.db")
     this.d1 = d1;
   }
 
