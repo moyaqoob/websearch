@@ -1,7 +1,5 @@
 import { SourceFilter, ApiStatus } from "../../types";
-import { API_BASE } from "../../lib/constants";
 import { getRelatedQueries } from "../../lib/utils";
-import { ApiStatusBadge } from "../ui/ApiStatusBadge";
 import styles from "../css-modules/SearchSidebar.module.css";
 
 interface Props {
@@ -15,7 +13,6 @@ interface Props {
 export function SearchSidebar({
   query,
   sources,
-  apiStatus,
   onRelatedClick,
   onSourceToggle,
 }: Props) {
@@ -64,24 +61,6 @@ export function SearchSidebar({
           </div>
         </section>
       )}
-
-      {/* API info */}
-      <section
-        className={`${styles.section} fade-up`}
-        style={{ animationDelay: "0.26s" }}
-      >
-        <h4 className={styles.sectionTitle}>API</h4>
-        <div className={styles.apiCard}>
-          <div className={styles.apiRow}>
-            <span className={styles.apiLabel}>endpoint</span>
-            <span className={styles.apiValue}>{API_BASE}/search</span>
-          </div>
-          <div className={styles.apiRow}>
-            <span className={styles.apiLabel}>status</span>
-            <ApiStatusBadge status={apiStatus} />
-          </div>
-        </div>
-      </section>
     </aside>
   );
 }
