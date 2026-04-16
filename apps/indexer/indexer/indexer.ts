@@ -13,9 +13,9 @@ export class Indexer {
   private localDb:Database;
   private d1: D1Client;
 
-  constructor(localDb: Database, d1: D1Client) {
+  constructor() {
     this.localDb = new Database("./data/search-engine.db")
-    this.d1 = d1;
+    this.d1 = new D1Client();
   }
 
   async indexAll(options: { batchSize?: number; concurrency?: number } = {}): Promise<IndexingResult> {

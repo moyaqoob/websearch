@@ -3,12 +3,10 @@ import { D1Client } from './indexer/client.ts';
 import 'dotenv/config';
 import { Indexer } from './indexer/indexer.ts';
 
-const LOCAL_DB_PATH = process.env.LOCAL_DB_PATH ?? './data/search-engine.db';
 
 
-const d1 = new D1Client();
 
-const indexer = new Indexer(localDb, d1);
+const indexer = new Indexer();
 const concurrency = Number(process.env.INDEXER_CONCURRENCY ?? '6');
 
 console.log('[Boot] Starting indexing run...');
