@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FilterTab, SourceFilter, SortOrder } from '../types';
 import { useSearch, useApiStatus, buildSourceFilters } from '../hooks/useSearch';
 import { TopBar } from '../components/layout/TopBar';
@@ -27,6 +27,11 @@ export function SearchPage({ initialQuery, onHome }: Props) {
     setSources(buildSourceFilters(results));
   }, [results]);
 
+  // Keep local query state in sync with URL-driven prop updates.
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
   const handleSearch = (q: string) => setQuery(q);
 
   const handleSourceToggle = (index: number) => {
@@ -49,6 +54,7 @@ export function SearchPage({ initialQuery, onHome }: Props) {
           return true;
         }
       });
+  console.log("visible results",visibleResults,enabledDomains)
 
   return (
     <div className={styles.page}>

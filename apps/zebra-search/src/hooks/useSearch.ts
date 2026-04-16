@@ -18,16 +18,17 @@ export function useSearch(query: string): UseSearchResult {
   const [error, setError]           = useState(false);
   const [searchTime, setSearchTime] = useState<string | null>(null);
 
+  console.log("queryy",query.trim())
   useEffect(() => {
+    console.log("this is me")
     if (!query.trim()) return;
+    console.log("this is me 2")
 
     setLoading(true);
     setError(false);
-    setResults([]);
 
     const t0 = performance.now();
     const controller = new AbortController();
-
     fetch(`${API_BASE}/search?q=${encodeURIComponent(query.trim())}`, {
       signal: controller.signal,
     })
@@ -53,7 +54,7 @@ export function useSearch(query: string): UseSearchResult {
 
     return () => controller.abort();
   }, [query]);
-
+  console.log("results",results)
   return { results, total, loading, error, searchTime };
 }
 
@@ -65,13 +66,11 @@ export function useApiStatus(): UseApiStatusResult {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('loading');
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(`${API_BASE}/health`, {
+    fetch(`${API_BASE}/`, {
       signal: AbortSignal.timeout(3000),
     })
       .then((r) => setApiStatus(r.ok ? 'live' : 'dead'))
       .catch(() => setApiStatus('dead'));
-    return () => controller.abort();
   }, []);
 
   return { apiStatus };

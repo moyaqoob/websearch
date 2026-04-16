@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { SEARCH_HINTS } from "../../lib/constants";
 import { SearchIcon } from "../ui/SearchIcon";
 import styles from "../css-modules/HeroSection.module.css";

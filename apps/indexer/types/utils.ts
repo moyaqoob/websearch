@@ -1,9 +1,4 @@
-// ============================================================
-// Core Domain Types
-// These mirror your Articles table schema exactly.
-// ============================================================
 
-// What gets read from the DB (articles JOIN signals)
 export interface IndexedArticle {
   id: string;
   url: string;
@@ -26,13 +21,32 @@ export interface IndexedSignal {
   popularity_score: number;
 }
 
+export interface ResultArticle {
+  id: string;
+  url: string;
+  url_normalized: string;
+  domain: string;
+  title: string;
+  content: string;
+  is_indexed: number;
+  crawl_timestamp: string;
+  published_date: string | null;
+  content_hash: string;
+
+  quality_score: number;
+  readability_score: number;
+  authority_score: number;
+  freshness_score: number;
+  popularity_score: number;
+  computed_at:string;
+}
 export interface CorpusStats {
   total_documents: number;
   avg_document_length: number;
 }
 
 export interface PostingRow {
-  doc_id: number;
+  doc_id: string;
   term_frequency: number;
   title_tf: number;
   content_tf: number;
@@ -41,7 +55,7 @@ export interface PostingRow {
 }
 
 export interface ArticleRow {
-  id: number;
+  id: string;
   url: string;
   title: string;
   content: string;
@@ -52,7 +66,7 @@ export interface ArticleRow {
   freshness_score: number;
 }
 export interface Posting {
-  doc_id: number;
+  doc_id: string;
   term_frequency: number;
   positions: number[];
   field_weights: FieldWeights;
@@ -114,7 +128,7 @@ export const DEFAULT_BM25_PARAMS: BM25Params = {
 // ============================================================
 
 export interface SearchResult {
-  article_id: number;
+  article_id: string;
   url: string;
   title: string;
   snippet: string; // extracted text snippet around query terms
@@ -151,7 +165,7 @@ export interface IndexingError {
 }
 
 export interface TokenizedDocument {
-  doc_id: number;
+  doc_id: string;
   doc_length: number; // total token count (content + title)
   tokens: TokenWithMetadata[];
 }

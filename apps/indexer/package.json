@@ -4,8 +4,12 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run server.ts",
-    "download-db": "bun run scripts/download-db.ts"
+    "dev": "bun run dist/server.js",
+    "download-db": "bun run scripts/download-db.ts",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -14,8 +18,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@cloudflare/workers-types": "^4.20260414.1",
+    "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.6",
     "@types/natural": "^6.0.1",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "natural": "^8.1.1"
   }

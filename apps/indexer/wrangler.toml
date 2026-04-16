@@ -1,0 +1,8 @@
+name = "zebra-indexer"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zebra-index"
+database_id="351cd0ac-d1ac-4422-9109-bcab691367c2"
