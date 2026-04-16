@@ -1,4 +1,3 @@
-import React from "react";
 import { SearchResult } from "../../types";
 import {
   getDomain,

@@ -1,4 +1,3 @@
-import React from "react";
 import { SourceFilter, ApiStatus } from "../../types";
 import { API_BASE } from "../../lib/constants";
 import { getRelatedQueries } from "../../lib/utils";
