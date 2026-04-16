@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { ApiStatus } from "../../types";
 import { SearchIcon } from "../ui/SearchIcon";
-import { ApiStatusBadge } from "../ui/ApiStatusBadge";
 import styles from "../css-modules/TopBar.module.css";
 
 interface Props {
@@ -17,7 +16,6 @@ export function TopBar({
   query,
   total,
   searchTime,
-  apiStatus,
   onSearch,
   onHome,
 }: Props) {
@@ -59,7 +57,6 @@ export function TopBar({
             <span>{searchTime}s</span>
           </>
         )}
-        <ApiStatusBadge status={apiStatus} />
       </div>
     </header>
   );

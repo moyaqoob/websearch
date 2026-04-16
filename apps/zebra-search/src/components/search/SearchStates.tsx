@@ -1,6 +1,4 @@
-import React from "react";
 import { ApiStatus } from "../../types";
-import { API_BASE } from "../../lib/constants";
 import styles from "../css-modules/SearchStates.module.css";
 
 export function LoadingState() {

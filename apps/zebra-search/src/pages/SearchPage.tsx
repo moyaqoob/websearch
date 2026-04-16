@@ -54,7 +54,6 @@ export function SearchPage({ initialQuery, onHome }: Props) {
           return true;
         }
       });
-  console.log("visible results",visibleResults,enabledDomains)
 
   return (
     <div className={styles.page}>

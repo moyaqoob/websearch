@@ -1,4 +1,3 @@
-import React from 'react';
 import { ApiStatus } from '../../types';
 import styles from './ApiStatusBadge.module.css';
 

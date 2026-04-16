@@ -1,4 +1,3 @@
-import React from "react";
 import { CURATED_SOURCES } from "../../lib/constants";
 import styles from "../css-modules/SourcesSection.module.css";
 
