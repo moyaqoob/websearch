@@ -4,12 +4,15 @@ import { StatsBar } from '../components/landing/StatsBar';
 import { FeaturesGrid } from '../components/landing/FeaturesGrid';
 import { SourcesSection } from '../components/landing/SourcesSection';
 import styles from '../components/css-modules/LandingPage.module.css';
-
+import { useNavigate } from 'react-router-dom';
 interface Props {
   onSearch: (query: string) => void;
 }
 
 export function LandingPage({ onSearch }: Props) {
+  const navigate  = useNavigate();
+
+
   return (
     <div className={styles.page}>
       {/* Animated background */}
@@ -18,7 +21,7 @@ export function LandingPage({ onSearch }: Props) {
       <div className={`${styles.orb} ${styles.orb2}`} />
       <div className={`${styles.orb} ${styles.orb3}`} />
 
-      <LandingNav onTrySearch={() => onSearch('')} />
+      <LandingNav onTrySearch={() => navigate("/search")} />
       <HeroSection onSearch={onSearch} />
       <StatsBar />
       <FeaturesGrid />
