@@ -18,7 +18,7 @@ export function LandingPage({ onSearch }: Props) {
       <div className={`${styles.orb} ${styles.orb2}`} />
       <div className={`${styles.orb} ${styles.orb3}`} />
 
-      <LandingNav onTrySearch={() => onSearch('segment tree')} />
+      <LandingNav onTrySearch={() => onSearch('')} />
       <HeroSection onSearch={onSearch} />
       <StatsBar />
       <FeaturesGrid />
