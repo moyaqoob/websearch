@@ -9,11 +9,6 @@ interface D1ApiResponse {
   success: boolean;
   errors: unknown[];
 }
-interface D2ApiResponse {
-  result: D1Result[];
-  success: boolean;
-  errors: unknown[];
-}
 
 export class D1Client {
   private accountId: string;
@@ -71,8 +66,7 @@ export class D1Client {
   }
 
   private async requestQuery<T>(payload: unknown): Promise<T> {
-    const response = await this.sendQuery(payload);
-
+    const response = await this.sendQuery(payload)
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`D1 request failed: ${response.status} ${text}`);
